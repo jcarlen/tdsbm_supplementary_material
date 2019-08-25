@@ -1,6 +1,6 @@
 Description of the contents of tdsbm\_supplementary\_material:
 
-The material in this folder is also hosted at: https://github.com/jcarlen/tdsbm_supplementary_material
+The material in this folder is hosted at: https://github.com/jcarlen/tdsbm_supplementary_material
 
 1) tdsbm\_data\_plots.R 
 
