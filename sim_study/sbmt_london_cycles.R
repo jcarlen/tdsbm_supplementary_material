@@ -13,7 +13,7 @@ library(sbmt)
 library(tidyverse)
 library(cowplot)
 
-# load data ----
+# load data (after setting working directory to top of downloaded ppsbm-files folder, see link above) ----
 load("data/London_cycles_dynsbm.Rdata") #for data.day1
 locations <- read.table('data/London_cycles_locations_stations.txt',header=T,sep=";")
 
