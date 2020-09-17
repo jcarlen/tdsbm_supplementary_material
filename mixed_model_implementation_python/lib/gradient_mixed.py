@@ -182,9 +182,9 @@ def normalize(r,c):
     return rn,cn
 
 # Function for initializing the parameters so that they have magnitudes close to the magnitude of the data. 
-def realistic_initial(n,N,numblocks):
-    r0 = np.exp(np.random.normal(size=(numblocks,numblocks,24)))#**2+1
+def realistic_initial(n,N,numblocks,T=24):
+    r0 = np.exp(np.random.normal(size=(numblocks,numblocks,T)))#**2+1
     c0 = np.exp(np.random.normal(size=(N,numblocks)))#**2+1
     c0=c0/np.sum(c0,0,keepdims=True)
-    r0=r0*float(np.sum(n))/(float(numblocks**2)*24.0)
+    r0=r0*float(np.sum(n))/(float(numblocks**2)*T)
     return (r0,c0)
