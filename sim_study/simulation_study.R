@@ -2,6 +2,7 @@
 # add generate_multilayer_array to package to facilitate simulation?
 # Note degree correcton can also lead to a more parsimonious and interpretable model representation where there is degree heterogeneity
 # because a unique class is not needed for each degree-activity leve
+# add harder cases with smaller amplitude sin curves so hard to distinguish. if it gets harder try with more nodes.
 # ---------------------------------------------------------------------------------------------------------------
 # new functions (generate_multilayer_array) ----
 
@@ -46,7 +47,7 @@ Time = 16 #use a power of two for compatibility with ppsbm hist method
 N = 30
 
 a = 10
-b = 5
+b = 5 
 ymax =  max(2*a, 2*b)
 
 #roles
@@ -119,9 +120,9 @@ for (s in 1:N_sim) {
   
   discrete_edge_array = generate_multilayer_array(N, Time, roles_discrete, omega, type = "discrete")
   discrete_edge_list = adj_to_edgelist(discrete_edge_array, directed = TRUE, selfEdges = TRUE)
-  discrete_sbmt = sbmt(discrete_edge_list, maxComms = n_roles, degreeCorrect = 0, directed = TRUE, klPerNetwork = 10)
-  plot(discrete_sbmt)
-  sbmt_ari[s] = adj.rand.index(discrete_sbmt$FoundComms[order(as.numeric(names(discrete_sbmt$FoundComms)))], roles_discrete)
+  tdd_sbm = sbmt(discrete_edge_list, maxComms = n_roles, degreeCorrect = 0, directed = TRUE, klPerNetwork = 10)
+  plot(tdd_sbm)
+  sbmt_ari[s] = adj.rand.index(tdd_sbm$FoundComms[order(as.numeric(names(tdd_sbm$FoundComms)))], roles_discrete)
 }
 
 # - results ----
@@ -130,7 +131,7 @@ for (s in 1:N_sim) {
 sbmt_ari
 
 # omega detection
-plot(discrete_sbmt)
+plot(tdd_sbm)
 # overall curve distances?
 
 # ---------------------------------------------------------------------------------------------------------------
@@ -145,13 +146,13 @@ for (s in 1:N_sim) {
   
   dc_discrete_edge_array = generate_multilayer_array(N, Time, roles_discrete, block_omega, dc_factors, type = "discrete")
   dc_discrete_edge_list = adj_to_edgelist(dc_discrete_edge_array, directed = TRUE, selfEdges = TRUE)
-  dc_discrete_sbmt = sbmt(dc_discrete_edge_list, maxComms = n_roles, degreeCorrect = 3, directed = TRUE, klPerNetwork = 10)
+  tdd_sbm_dc = sbmt(dc_discrete_edge_list, maxComms = n_roles, degreeCorrect = 3, directed = TRUE, klPerNetwork = 10)
   # to compare likelihood
-  # dc_discrete_sbmt2 = sbmt(dc_discrete_edge_list, maxComms = n_roles*2, degreeCorrect = 3, directed = TRUE, klPerNetwork = 10)
+  # tdd_sbm_dc_2 = sbmt(dc_discrete_edge_list, maxComms = n_roles*2, degreeCorrect = 3, directed = TRUE, klPerNetwork = 10)
   # diff in llik vs. diff in param
-  # (dc_discrete_sbmt2$llik - dc_discrete_sbmt$llik)/(tdd_n_param(N, n_roles*2, Time) - tdd_n_param(N, n_roles, Time)) 
-  plot(dc_discrete_sbmt)
-  dc_ari[s] = adj.rand.index(dc_discrete_sbmt$FoundComms[order(as.numeric(names(dc_discrete_sbmt$FoundComms)))], roles_discrete)
+  # (tdd_sbm_dc_2$llik - tdd_sbm_dc$llik)/(tdd_n_param(N, n_roles*2, Time) - tdd_n_param(N, n_roles, Time)) 
+  plot(tdd_sbm_dc)
+  dc_ari[s] = adj.rand.index(tdd_sbm_dc$FoundComms[order(as.numeric(names(tdd_sbm_dc$FoundComms)))], roles_discrete)
 }
 
 
@@ -161,7 +162,7 @@ for (s in 1:N_sim) {
 dc_ari
 
 # omega detection
-plot(dc_discrete_sbmt)
+plot(tdd_sbm_dc)
 # overall curve distances?
 
 # ---------------------------------------------------------------------------------------------------------------
@@ -227,25 +228,44 @@ apply(exp(dc_discrete_ppsbm[[n_roles]]$logintensities.ql), 1, plot, type = "l", 
 # mixed-membership example ----
 
 roles_mixed = matrix(c(rep(.5, 2*N/3), rep(c(0,1), N/3), rep(c(1,0), N/3)), nrow = n_roles, ncol = N); roles_mixed
-
 #apply sum to 1 constraint to mixed roles
 roles_mixed = roles_mixed/rowSums(roles_mixed)
+
+tdmm_sbm_role_mean_abs_error = 1:N_sim
+tdmm_sbm_omega_mean_abs_error = 1:N_sim
+tdd_sbm_roles_mean_abs_error = 1:N_sim
+tdd_sbm_dc_roles_mean_abs_error = 1:N_sim
+
+setwd("mixed_model_implementation_python")
 
 for (s in 1:N_sim) {
   
   mixed_edge_array = generate_multilayer_array(N, Time, roles_mixed, block_omega, type = "mixed")
-  mixed_edge_list = adj_to_edgelist(mixed_edge_array, directed = TRUE, selfEdges = TRUE)
+  write.csv(mixed_edge_array, "../data/sim/mixed_edge_array.csv", row.names = FALSE)
   # run mixed
+  system("python tdmm_sbm_sim_study.py")
+  tdmm_sbm_roles_2 = read.csv("../mixed_model_results/SIM_2_roles.csv")
+  tdmm_sbm_role_mean_abs_error[s] = min(mean(abs(roles_mixed - t(tdmm_sbm_roles_2))), mean(abs(roles_mixed - t(tdmm_sbm_roles_2)[2:1,]))) #try both orders
+  tdmm_sbm_omega_2 = read.csv("../mixed_model_results/SIM_2_omega.csv")
+  tdmm_sbm_omega_mean_abs_error[s] = min(mean(abs(unlist(tdmm_sbm_omega_2 - apply(block_omega, 3, as.vector)))), 
+                                      mean(abs(unlist(tdmm_sbm_omega_2 - apply(block_omega, 3, function(x) {as.vector(t(x))})))))
   
-  # to compare likelihood
-  # dc_discrete_sbmt2 = sbmt(dc_discrete_edge_list, maxComms = n_roles*2, degreeCorrect = 3, directed = TRUE, klPerNetwork = 10)
-  # diff in llik vs. diff in param
-  # (dc_discrete_sbmt2$llik - dc_discrete_sbmt$llik)/(tdd_n_param(N, n_roles*2, Time) - tdd_n_param(N, n_roles, Time)) 
-  plot(dc_discrete_sbmt)
-  dc_ari[s] = adj.rand.index(dc_discrete_sbmt$FoundComms[order(as.numeric(names(dc_discrete_sbmt$FoundComms)))], roles_discrete)
+  # try fitting discrete models to data generated from mixed membership
+  # mixed_edge_edglist = adj_to_edgelist(mixed_edge_array, directed = TRUE, selfEdges = TRUE, removeZeros = TRUE)
+  # tdd_sbm = sbmt(mixed_edge_edglist, maxComms = n_roles+1, degreeCorrect = 0, directed = TRUE, klPerNetwork = 10)
+  # plot(tdd_sbm)
+  # #found_roles = matrix(0, n_roles, N); for (i in 1:N) {found_roles[tdd_sbm$FoundComms[i]+1,i] = 1}
+  # tdd_sbm_roles = tdd_sbm$FoundComms[order(as.numeric(names(tdd_sbm$FoundComms)))]
+  # tdd_sbm_roles_mean_abs_error[s] = min(mean(abs(tdd_sbm_roles+1 - apply(roles_mixed, 2, which.max))), 
+  #                                    mean(abs(2-tdd_sbm_roles - apply(roles_mixed, 2, which.max))))
+  # plot(tdd_sbm)
+  # tdd_sbm_dc = sbmt(mixed_edge_edglist, maxComms = n_roles+1, degreeCorrect = 3, directed = TRUE, klPerNetwork = 10)
+  # plot(tdd_sbm_dc)
+  # tdd_sbm_dc_roles_mean_abs_error[s] = min(mean(abs(tdd_sbm_dc$FoundComms+1 - apply(roles_mixed, 2, which.max))), 
+  #                                       mean(abs(2-tdd_sbm_dc$FoundComms - apply(roles_mixed, 2, which.max))))
+ 
 }
 
-
-
+setwd("..")
 
 
