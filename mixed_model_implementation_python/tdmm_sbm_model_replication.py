@@ -111,7 +111,7 @@ for blocks_i in range(0,np.size(numblocklist,0)):
 #Save
 for blocks_i in range(0,np.size(numblocklist,0)):
     numblocks=numblocklist[blocks_i]
-    pd.DataFrame(LA_fit[LA_maxind[blocks_i]][blocks_i][0].reshape([numblocks**2, 24])).to_csv("../mixed_model_results/LA_"+str(numblocks)+"_omega.csv",  index = False)
+    pd.DataFrame(LA_fit[LA_maxind[blocks_i]][blocks_i][0].reshape([numblocks**2, 24], order = 'F')).to_csv("../mixed_model_results/LA_"+str(numblocks)+"_omega.csv",  index = False)
     pd.DataFrame(LA_fit[LA_maxind[blocks_i]][blocks_i][1], index = LA_stations).to_csv("../mixed_model_results/LA_"+str(numblocks)+"_roles.csv", index = LA_stations)
 
 # Manhattan home subset models
@@ -185,7 +185,7 @@ for blocks_i in range(0,np.size(numblocklist,0)):
 #Save
 for blocks_i in range(0,np.size(numblocklist,0)):
     numblocks=numblocklist[blocks_i]
-    pd.DataFrame(Manhattan_fit[Manhattan_maxind[blocks_i]][blocks_i][0].reshape([numblocks**2, 24])).to_csv("../mixed_model_results/Manhattan_"+str(numblocks)+"_omega.csv",  index = False)
+    pd.DataFrame(Manhattan_fit[Manhattan_maxind[blocks_i]][blocks_i][0].reshape([numblocks**2, 24], order = 'F')).to_csv("../mixed_model_results/Manhattan_"+str(numblocks)+"_omega.csv",  index = False)
     pd.DataFrame(Manhattan_fit[Manhattan_maxind[blocks_i]][blocks_i][1], index = Manhattan_stations).to_csv("../mixed_model_results/Manhattan_"+str(numblocks)+"_roles.csv", index = Manhattan_stations)
 
 # San Fransisco models
@@ -312,7 +312,7 @@ for blocks_i in range(0,np.size(numblocklist,0)):
 #Save
 for blocks_i in range(0,np.size(numblocklist,0)):
     numblocks=numblocklist[blocks_i]
-    pd.DataFrame(SF_fit[SF_maxind[blocks_i]][blocks_i][0].reshape([numblocks**2, 24])).to_csv("../mixed_model_results/SF_"+str(numblocks)+"_omega.csv",  index = False)
+    pd.DataFrame(SF_fit[SF_maxind[blocks_i]][blocks_i][0].reshape([numblocks**2, 24], order = 'F')).to_csv("../mixed_model_results/SF_"+str(numblocks)+"_omega.csv",  index = False)
     pd.DataFrame(SF_fit[SF_maxind[blocks_i]][blocks_i][1], index = SF_stations).to_csv("../mixed_model_results/SF_"+str(numblocks)+"_roles.csv", index = SF_stations)
 
 
@@ -381,6 +381,6 @@ for blocks_i in range(0,np.size(numblocklist,0)):
 #Save
 for blocks_i in range(0,np.size(numblocklist,0)):
     numblocks=numblocklist[blocks_i]
-    pd.DataFrame(NY_fit[NY_maxind[blocks_i]][blocks_i][0].reshape([numblocks**2, 24])).to_csv("../mixed_model_results/NY_"+str(numblocks)+"_omega.csv",  index = False)
+    pd.DataFrame(NY_fit[NY_maxind[blocks_i]][blocks_i][0].reshape([numblocks**2, 24], order = 'F')).to_csv("../mixed_model_results/NY_"+str(numblocks)+"_omega.csv",  index = False)
     pd.DataFrame(NY_fit[NY_maxind[blocks_i]][blocks_i][1], index = NY_stations).to_csv("../mixed_model_results/NY_"+str(numblocks)+"_roles.csv", index = NY_stations)
 

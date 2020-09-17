@@ -30,6 +30,7 @@ generate_multilayer_array <- function(N, Time, roles, omega, dc_factors = rep(1,
       } 
     }
   }
+  rownames(edge_array) = 1:N
   return(edge_array)
 }
 
@@ -233,9 +234,8 @@ roles_mixed = roles_mixed/rowSums(roles_mixed)
 
 tdmm_sbm_role_mean_abs_error = 1:N_sim
 tdmm_sbm_omega_mean_abs_error = 1:N_sim
-tdd_sbm_roles_mean_abs_error = 1:N_sim
-tdd_sbm_dc_roles_mean_abs_error = 1:N_sim
 
+# assume starting from tdsbm_supplementary_material directory
 setwd("mixed_model_implementation_python")
 
 for (s in 1:N_sim) {
@@ -243,27 +243,29 @@ for (s in 1:N_sim) {
   mixed_edge_array = generate_multilayer_array(N, Time, roles_mixed, block_omega, type = "mixed")
   write.csv(mixed_edge_array, "../data/sim/mixed_edge_array.csv", row.names = FALSE)
   # run mixed
-  system("python tdmm_sbm_sim_study.py")
+  system("python3 tdmm_sbm_sim_study.py")
   tdmm_sbm_roles_2 = read.csv("../mixed_model_results/SIM_2_roles.csv")
   tdmm_sbm_role_mean_abs_error[s] = min(mean(abs(roles_mixed - t(tdmm_sbm_roles_2))), mean(abs(roles_mixed - t(tdmm_sbm_roles_2)[2:1,]))) #try both orders
   tdmm_sbm_omega_2 = read.csv("../mixed_model_results/SIM_2_omega.csv")
+  
   tdmm_sbm_omega_mean_abs_error[s] = min(mean(abs(unlist(tdmm_sbm_omega_2 - apply(block_omega, 3, as.vector)))), 
                                       mean(abs(unlist(tdmm_sbm_omega_2 - apply(block_omega, 3, function(x) {as.vector(t(x))})))))
   
   # try fitting discrete models to data generated from mixed membership
-  # mixed_edge_edglist = adj_to_edgelist(mixed_edge_array, directed = TRUE, selfEdges = TRUE, removeZeros = TRUE)
-  # tdd_sbm = sbmt(mixed_edge_edglist, maxComms = n_roles+1, degreeCorrect = 0, directed = TRUE, klPerNetwork = 10)
-  # plot(tdd_sbm)
-  # #found_roles = matrix(0, n_roles, N); for (i in 1:N) {found_roles[tdd_sbm$FoundComms[i]+1,i] = 1}
-  # tdd_sbm_roles = tdd_sbm$FoundComms[order(as.numeric(names(tdd_sbm$FoundComms)))]
-  # tdd_sbm_roles_mean_abs_error[s] = min(mean(abs(tdd_sbm_roles+1 - apply(roles_mixed, 2, which.max))), 
-  #                                    mean(abs(2-tdd_sbm_roles - apply(roles_mixed, 2, which.max))))
-  # plot(tdd_sbm)
-  # tdd_sbm_dc = sbmt(mixed_edge_edglist, maxComms = n_roles+1, degreeCorrect = 3, directed = TRUE, klPerNetwork = 10)
-  # plot(tdd_sbm_dc)
-  # tdd_sbm_dc_roles_mean_abs_error[s] = min(mean(abs(tdd_sbm_dc$FoundComms+1 - apply(roles_mixed, 2, which.max))), 
-  #                                       mean(abs(2-tdd_sbm_dc$FoundComms - apply(roles_mixed, 2, which.max))))
- 
+  mixed_edge_edglist = adj_to_edgelist(mixed_edge_array, directed = TRUE, selfEdges = TRUE, removeZeros = TRUE)
+  tdd_sbm = sbmt(mixed_edge_edglist, maxComms = n_roles, degreeCorrect = 3, directed = TRUE, klPerNetwork = 10)
+  plot(tdd_sbm)
+  tdd_sbm$llik
+  
+  # instead summarize error by finding likelihood of observed using mixed vs. discrete model fit parameters
+  tdmm_sbm_llik(mixed_edge_array, C = tdmm_sbm_roles_2, omega = tdmm_sbm_omega_2, selfEdges = TRUE, directed = TRUE)
+  
+  # evaluate liklihood of mixed edge array using params found by discrete model
+  tdd_roles = matrix(0, N, n_roles); for (i in 1:N) {tdd_roles[i, tdd_sbm$FoundComms[i]+1] = 1}; rownames(tdd_roles) = 1:N
+  tdd_roles = t(t(tdd_roles)/colSums(tdd_roles))
+  tdd_omega = sapply(tdd_sbm$EdgeMatrix, as.vector)
+  tdmm_sbm_llik(mixed_edge_array, C = tdd_roles, omega = tdd_omega, selfEdges = TRUE, directed = TRUE)
+  
 }
 
 setwd("..")

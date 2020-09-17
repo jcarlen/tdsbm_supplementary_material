@@ -77,5 +77,5 @@ SIM_llmax=np.max(SIM_ll,0)
 #Save
 for blocks_i in range(0,np.size(numblocklist,0)):
     numblocks=numblocklist[blocks_i]
-    pd.DataFrame(SIM_fit[SIM_maxind[blocks_i]][blocks_i][0].reshape([numblocks**2, T])).to_csv("../mixed_model_results/SIM_"+str(numblocks)+"_omega.csv", index=False)
+    pd.DataFrame(SIM_fit[SIM_maxind[blocks_i]][blocks_i][0].reshape([numblocks**2, T], order = 'F')).to_csv("../mixed_model_results/SIM_"+str(numblocks)+"_omega.csv", index=False)
     pd.DataFrame(SIM_fit[SIM_maxind[blocks_i]][blocks_i][1]).to_csv("../mixed_model_results/SIM_"+str(numblocks)+"_roles.csv", index=False)

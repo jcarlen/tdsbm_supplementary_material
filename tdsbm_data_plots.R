@@ -619,8 +619,7 @@ ggsave("IMG/sf_svd.png", svdplot2(sf.in, sf.out, 2, title = "Singular Vectors â€
 la_continuous.roles = read.csv("mixed_model_results/LA_2_roles.csv", sep = ",", header = T)
 la_continuous.roles$X = as.character(la_continuous.roles$X)
 la_continuous = left_join(la.station, la_continuous.roles, by = c("id"="X"))[,c("id", "lon", "lat", "X0", "X1")]
-la_continuous.omega = lapply(read.csv("mixed_model_results/LA_2_omega.csv", sep = ",", header = T), 
-                            matrix, 2, 2, byrow = TRUE) # reconstruct result in same form as discrete
+la_continuous.omega = lapply(read.csv("mixed_model_results/LA_2_omega.csv", sep = ",", header = T), matrix, 2, 2) # reconstruct result in same form as discrete
 
 #     + discrete ----
 # 2 blocks
@@ -647,8 +646,7 @@ la_discrete.5 = left_join(la.station, data.frame(id =  names(la_discrete.results
 
 sf_continuous.roles = read.csv("mixed_model_results/SF_2_roles.csv", sep = ",", header = T)
 sf_continuous = left_join(sf.station, sf_continuous.roles, by = c("id"="X"))[,c("id", "lon", "lat", "X0", "X1")]
-sf_continuous.omega = lapply(read.csv("mixed_model_results/SF_2_omega.csv", sep = ",", header = T),
-                                                  matrix, 2, 2, byrow = T)
+sf_continuous.omega = lapply(read.csv("mixed_model_results/SF_2_omega.csv", sep = ",", header = T), matrix, 2, 2)
 
 #     + discrete  ----
 sf_discrete.results = readRDS("discrete_model_results/sf2_3.RDS")
@@ -662,20 +660,17 @@ write.csv(sf_discrete, file = "discrete_model_results/sf2_3_roles.csv", row.name
 # 2 blocks
 ny_continuous.roles.2 = read.csv("mixed_model_results/NY_2_roles.csv", sep = ",", header = T)
 ny_continuous.2 = left_join(ny1610.station, ny_continuous.roles.2, by = c("id"="X"))[,c("id", "lon", "lat", "X0", "X1")]
-ny_continuous.omega.2 = lapply(read.csv("mixed_model_results/NY_2_omega.csv", sep = ",", header = T), 
-                              matrix, 2, 2, byrow = T)
+ny_continuous.omega.2 = lapply(read.csv("mixed_model_results/NY_2_omega.csv", sep = ",", header = T), matrix, 2, 2)
 
 # 3 blocks
 ny_continuous.roles.3 = read.csv("mixed_model_results/NY_3_roles.csv", sep = ",", header = T)
 ny_continuous.3 = left_join(ny1610.station, ny_continuous.roles.3, by = c("id"="X"))[,c("id", "lon", "lat", "X0", "X1", "X2")]
-ny_continuous.omega.3 = lapply(read.csv("mixed_model_results/NY_3_omega.csv", sep = ",", header = T), 
-                              matrix, 3, 3, byrow = T)
+ny_continuous.omega.3 = lapply(read.csv("mixed_model_results/NY_3_omega.csv", sep = ",", header = T), matrix, 3, 3)
   
 # 4 blocks
 ny_continuous.roles.4 = read.csv("mixed_model_results/NY_4_roles.csv", sep = ",", header = T)
 ny_continuous.4 = left_join(ny1610.station, ny_continuous.roles.4, by = c("id"="X"))[,c("id", "lon", "lat", "X0", "X1", "X2", "X3")]
-ny_continuous.omega.4 = lapply(read.csv("mixed_model_results/NY_4_omega.csv", sep = ",", header = T), 
-                              matrix, 4, 4, byrow = T)
+ny_continuous.omega.4 = lapply(read.csv("mixed_model_results/NY_4_omega.csv", sep = ",", header = T), matrix, 4, 4)
 
 
 
@@ -1701,8 +1696,7 @@ ny_hm_static.6 = left_join(ny1610_hm.station, data.frame(id =  as.integer(names(
 ny_hm_continuous.roles.2 = read.csv("mixed_model_results/Manhattan_2_roles.csv", sep = ",", header = T)
 ny_hm_continuous.2 = left_join(ny1610_hm.station, ny_hm_continuous.roles.2, 
                                by = c("id"="X"))
-ny_hm_continuous.omega.2 = lapply(read.csv("mixed_model_results/Manhattan_2_omega.csv", sep = ",", header = T), 
-                               matrix, 2, 2, byrow = T)
+ny_hm_continuous.omega.2 = lapply(read.csv("mixed_model_results/Manhattan_2_omega.csv", sep = ",", header = T), matrix, 2, 2)
 
 # pre-process 
 ny_hm_continuous.2$C_total = rowSums(ny_hm_continuous.2[,c("X0","X1")])
@@ -1718,8 +1712,7 @@ ny_hm_continuous_labels.2 = c("work", "home")
 ny_hm_continuous.roles.3 = read.csv("mixed_model_results/Manhattan_3_roles.csv", sep = ",", header = T)
 ny_hm_continuous.3 = left_join(ny1610_hm.station, ny_hm_continuous.roles.3, 
                                by = c("id"="X"))[,c("id", "lon", "lat", "X0", "X1", "X2")]
-ny_hm_continuous.omega.3 = lapply(read.csv("mixed_model_results/Manhattan_3_omega.csv", sep = ",", header = T), 
-                                  matrix, 3, 3, byrow = T)
+ny_hm_continuous.omega.3 = lapply(read.csv("mixed_model_results/Manhattan_3_omega.csv", sep = ",", header = T), matrix, 3, 3)
 # pre-process 
 ny_hm_continuous.3$C_total = rowSums(ny_hm_continuous.3[,c("X0","X1","X2")])
 ny_hm_continuous.3$role = rgb(ny_hm_continuous.3[,c("X0","X1","X2")]/ny_hm_continuous.3$C_total)
@@ -1732,8 +1725,7 @@ ny_hm_continuous_labels.3 = c("home", "work", "mixed")
 ny_hm_continuous.roles.4 = read.csv("mixed_model_results/Manhattan_4_roles.csv", sep = ",", header = T)
 ny_hm_continuous.4 = left_join(ny1610_hm.station, ny_hm_continuous.roles.4, 
                                by = c("id"="X"))[,c("id", "lon", "lat", "X0", "X1", "X2", "X3")]
-ny_hm_continuous.omega.4 = lapply(read.csv("mixed_model_results/Manhattan_4_omega.csv", sep = ",", header = T), 
-                                  matrix, 4, 4, byrow = T)
+ny_hm_continuous.omega.4 = lapply(read.csv("mixed_model_results/Manhattan_4_omega.csv", sep = ",", header = T), matrix, 4, 4)
 
 # pre-process 
 ny_hm_continuous.4$C_total = rowSums(ny_hm_continuous.4[,c("X0","X1","X2","X3")])
@@ -1748,8 +1740,7 @@ ny_hm_continuous_labels.4 = c("home (west)", "work", "home (east)", "mixed")
 ny_hm_continuous.roles.5 = read.csv("mixed_model_results/Manhattan_5_roles.csv", sep = ",", header = T)
 ny_hm_continuous.5 = left_join(ny1610_hm.station, ny_hm_continuous.roles.5, 
                                by = c("id"="X"))[,c("id", "lon", "lat", "X0", "X1", "X2", "X3", "X4")]
-ny_hm_continuous.omega.5 = lapply(read.csv("mixed_model_results/Manhattan_5_omega.csv", sep = ",", header = T), 
-                                  matrix, 5, 5, byrow = T)
+ny_hm_continuous.omega.5 = lapply(read.csv("mixed_model_results/Manhattan_5_omega.csv", sep = ",", header = T), matrix, 5, 5)
 
 # pre-process 
 ny_hm_continuous.5$C_total = rowSums(ny_hm_continuous.5[,c("X0","X1","X2","X3","X4")])
@@ -1773,8 +1764,7 @@ ny_hm_continuous_labels.5 = c("mixed", "home (west)", "park", "home (east)", "wo
 ny_hm_continuous.roles.6 = read.csv("mixed_model_results/Manhattan_6_roles.csv", sep = ",", header = T)
 ny_hm_continuous.6 = left_join(ny1610_hm.station, ny_hm_continuous.roles.6, 
                                by = c("id"="X"))[,c("id", "lon", "lat", "X0", "X1", "X2", "X3", "X4", "X5")]
-ny_hm_continuous.omega.6 = lapply(read.csv("mixed_model_results/Manhattan_6_omega.csv", sep = ",", header = T), 
-                                  matrix, 6, 6, byrow = T)
+ny_hm_continuous.omega.6 = lapply(read.csv("mixed_model_results/Manhattan_6_omega.csv", sep = ",", header = T), matrix, 6, 6)
 
 # pre-process 
 ny_hm_continuous.6$C_total = rowSums(ny_hm_continuous.6[,c("X0","X1","X2","X3","X4","X5")])

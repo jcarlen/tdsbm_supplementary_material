@@ -111,7 +111,7 @@ for blocks_i in range(0,np.size(numblocklist,0)):
 #Save
 for blocks_i in range(0,np.size(numblocklist,0)):
     numblocks=numblocklist[blocks_i]
-    pd.DataFrame(LA_fit[LA_maxind[blocks_i]][blocks_i][0].reshape([numblocks**2, 24])).to_csv("../mixed_model_results/LA_"+str(numblocks)+"_omega.csv",  index = False)
+    pd.DataFrame(LA_fit[LA_maxind[blocks_i]][blocks_i][0].reshape([numblocks**2, 24],order = 'F')).to_csv("../mixed_model_results/LA_"+str(numblocks)+"_omega.csv",  index = False)
     pd.DataFrame(LA_fit[LA_maxind[blocks_i]][blocks_i][1], index = LA_stations).to_csv("../mixed_model_results/LA_"+str(numblocks)+"_roles.csv", index = LA_stations)
 
 
