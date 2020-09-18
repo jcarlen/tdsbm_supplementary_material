@@ -2,6 +2,7 @@
 # - add generate_multilayer_array to package to facilitate simulation?
 # - Note: degree correcton can also lead to a more parsimonious and interpretable model representation where there is degree heterogeneity because a unique class is not needed for each degree-activity level
 #   add harder cases with smaller amplitude sin curves so hard to distinguish. if it gets harder try with more nodes.
+# - More heterogeneous degree correcton case?
 # - N = 120?
 # ---------------------------------------------------------------------------------------------------------------
 # new functions (generate_multilayer_array) ----
