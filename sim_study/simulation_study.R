@@ -1,3 +1,8 @@
+# OUTLINE
+# 1. Run tdd simulation to evaluate parameter estimation
+# 2. ppsbm to show impact of degree correction 
+# 3. mixed-membership to show impact of potential model mis-specification
+# ---------------------------------------------------------------------------------------------------------------
 # TO DO
 # - add generate_multilayer_array to package to facilitate simulation?
 # - Note: degree correcton can also lead to a more parsimonious and interpretable model representation where there is degree heterogeneity because a unique class is not needed for each degree-activity level
@@ -47,6 +52,7 @@ library(fossil) #for adj rand index
 
 a = 10
 b = 5 
+Time = 16 #use a power of two for compatibility with ppsbm hist method
 ymax =  max(2*a, 2*b)
 x = seq(.5, Time)
   
@@ -57,6 +63,7 @@ curve(a*sin(x*2*pi/Time)+a, 0, Time, ylim = c(0, ymax))
 curve(-a*sin(x*2*pi/Time)+a, 0, Time, ylim = c(0, ymax))
 curve(b*sin(x*pi/Time)+ b, 0, Time, ylim = c(0, ymax))
 
+# show three-block curves
 par(mfrow = c(3, 3))
 curve(b*sin(x*pi/Time) + b, 0, Time, ylim = c(0, ymax))
 curve(a*sin(x*2*pi/Time)+a, 0, Time, ylim = c(0, ymax))
@@ -124,7 +131,7 @@ simulated_tdd <- function(N, n_roles, omega, Time, dc = 0, N_sim = 10, directed 
     
     #apply sum to 1 constraint
     f.tmp = function(v) {v/sum(v)}
-    dc_factors = as.vector(aggregate(dc_factors ~ roles_discrete, FUN = "f.tmp")[,-1])
+    dc_factors = as.vector(aggregate(dc_factors ~ roles_discrete, FUN = f.tmp)[,-1])
     
     # check 
     #identical(aggregate(dc_factors ~ roles_discrete, FUN = "sum")[,2], rep(1, n_roles))
@@ -154,7 +161,7 @@ simulated_tdd <- function(N, n_roles, omega, Time, dc = 0, N_sim = 10, directed 
     tdd_sbm = sbmt(discrete_edge_list, maxComms = n_roles, degreeCorrect = dc, directed = TRUE, klPerNetwork = kl)
     plot(tdd_sbm)
     # adjusted rand index
-    sbmt_ari[s] = adj.rand.index(tdd_sbm$FoundComms[order(as.numeric(names(tdd_sbm$FoundComms)))], roles_discrete)
+    tdd_sbm_ari[s] = adj.rand.index(tdd_sbm$FoundComms[order(as.numeric(names(tdd_sbm$FoundComms)))], roles_discrete)
     # compare likelihood for true vs. fit parameters for simulated data
     tdd_sbm_true[s] = 
       tdd_sbm_llik(discrete_edge_array, roles = roles_discrete-1, omega = block_omega, directed = TRUE, selfEdges = TRUE)
@@ -165,7 +172,7 @@ simulated_tdd <- function(N, n_roles, omega, Time, dc = 0, N_sim = 10, directed 
   # - results ----
   results = list(
     # role detection
-    sbmt_ari = sbmt_ari,
+    tdd_sbm_ari = tdd_sbm_ari,
     # compare likelihood of data under fit vs. true model
     tdd_sbm_true = tdd_sbm_true,
     tdd_sbm_sim = tdd_sbm_sim,
