@@ -8,7 +8,7 @@
 # - Note: degree correcton can also lead to a more parsimonious and interpretable model representation where there is degree heterogeneity because a unique class is not needed for each degree-activity level
 #   add harder cases with smaller amplitude sin curves so hard to distinguish. if it gets harder try with more nodes.
 # - More heterogeneous degree correcton case?
-# - N = 120?
+# - V = 120?
 # ---------------------------------------------------------------------------------------------------------------
 # new functions (generate_multilayer_array) ----
 
@@ -259,6 +259,9 @@ apply(exp(dc_discrete_ppsbm[[n_roles]]$logintensities.ql), 1, plot, type = "l", 
 # Bike example shows how degree correction ib model -> group statins with similar behavior across activity levels
 # ---------------------------------------------------------------------------------------------------------------
 # 3. mixed-membership to show impact of potential model mis-specification ----
+
+n_roles = K[1]
+N = V[1]
 
 roles_mixed = matrix(c(rep(.5, 2*N/3), rep(c(0,1), N/3), rep(c(1,0), N/3)), nrow = n_roles, ncol = N); roles_mixed
 

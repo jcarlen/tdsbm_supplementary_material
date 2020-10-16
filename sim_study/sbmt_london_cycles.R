@@ -5,7 +5,8 @@
 #   linked  "http://cmatias.perso.math.cnrs.fr/Docs/ppsbm-files.zip (under "R code with datasets analyses")
 #   with the entry for the  publication: "Catherine Matias, Tabea Rebafka & Fanny Villers, A semiparametric extension of the stochastic block model for longitudinal networks. Biometrika, 105(3): 665-680, 2018."
 #
-# NOTE: Set working directory to top of downloaded ppsbm-files folder
+# NOTE: Upate path for loading London_cycles_dynsbm.Rdata and London_cycles_locations_stations.txt (in ppsbm-files folder)
+#       Can also load the final data object sbmt_london_cycles_data.RData and jump to modeling
 # -------------------------------------------------------------------------------------------------------------
 # libraries ----
 # devtools::install_github("jcarlen/sbm", subdir = "sbmt") 
@@ -14,8 +15,8 @@ library(tidyverse)
 library(cowplot)
 
 # load data (after setting working directory to top of downloaded ppsbm-files folder, see link above) ----
-load("data/London_cycles_dynsbm.Rdata") #for data.day1
-locations <- read.table('data/London_cycles_locations_stations.txt',header=T,sep=";")
+load("~/Downloads/ppsbm-files/data/London_cycles_dynsbm.Rdata") #for data.day1
+locations <- read.table('~/Downloads/ppsbm-files/data/London_cycles_locations_stations.txt',header=T,sep=";")
 
 #   station info ----
 
@@ -85,11 +86,11 @@ station_output_info %>% filter(block == belgrove_block) #without degree correcto
 plot_grid(nrow =2,
           data.day1 %>% filter(StartStation.Name %in% (station_output_info %>% filter(block == belgrove_block) %>% pull(name))) %>%
             group_by(StartStation.Name, hour) %>% summarize(count = n()) %>% 
-            ggplot(aes(x = hour, y = count, group = StartStation.Name)) + geom_line() + ggtitle("out-traffic from block"),
+            ggplot(aes(x = hour, y = count, group = StartStation.Name)) + geom_line() + ggtitle("out-traffic from block (no degree correction)"),
           
           data.day1 %>% filter(EndStation.Name %in% (station_output_info %>% filter(block == belgrove_block) %>% pull(name))) %>% 
             group_by(EndStation.Name, hour) %>% summarize(count = n()) %>% 
-            ggplot(aes(x = hour, y = count, group = EndStation.Name)) + geom_line() + ggtitle("in-traffic to block"))
+            ggplot(aes(x = hour, y = count, group = EndStation.Name)) + geom_line() + ggtitle("in-traffic to block (no degree correction)"))
 
 
 # degreee correction
@@ -101,8 +102,11 @@ station_output_info %>% filter(block == belgrove_block) #without degree correcto
 plot_grid(nrow =2,
           data.day1 %>% filter(StartStation.Name %in% (station_output_info %>% filter(block == belgrove_block) %>% pull(name))) %>%
             group_by(StartStation.Name, hour) %>% summarize(count = n()) %>% 
-            ggplot(aes(x = hour, y = count, group = StartStation.Name)) +geom_line() + ggtitle("out-traffic from block"),
+            ggplot(aes(x = hour, y = count, group = StartStation.Name)) +geom_line() + ggtitle("out-traffic from block (degree correction)"),
                    
           data.day1 %>% filter(EndStation.Name %in% (station_output_info %>% filter(block == belgrove_block) %>% pull(name))) %>% 
             group_by(EndStation.Name, hour) %>% summarize(count = n()) %>% 
-            ggplot(aes(x = hour, y = count, group = EndStation.Name)) +geom_line() + ggtitle("in-traffic to block"))
+            ggplot(aes(x = hour, y = count, group = EndStation.Name)) +geom_line() + ggtitle("in-traffic to block (degree correction)"))
+
+# save all objects
+save.image("sim_study/sbmt_london_cycles_data.RData")
