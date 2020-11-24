@@ -5,9 +5,11 @@
 # ---------------------------------------------------------------------------------------------------------------
 # TO DO
 # - add generate_multilayer_array to sbmt package to facilitate simulation?
-# - Note: degree correcton can also lead to a more parsimonious and interpretable model representation where there is degree heterogeneity because a unique class is not needed for each degree-activity level
-#   add harder cases with smaller amplitude sin curves so hard to distinguish. if it gets harder try with more nodes.
+#     + implement & test for directed networks
+# - Add harder cases with smaller amplitude sin curves so hard to distinguish? if it gets harder try with more nodes.
 # - More heterogeneous degree correcton case?
+# - Note: degree correcton can also lead to a more parsimonious and interpretable model representation where there is degree heterogeneity 
+#   because a unique class is not needed for each degree-activity level.
 # ---------------------------------------------------------------------------------------------------------------
 # libraries ----
 # devtools::install_github("jcarlen/sbm", subdir = "sbmt") 
@@ -17,25 +19,52 @@ library(gtools) #for permutations
 
 # new functions (generate_multilayer_array) ----
 
-# generate N x N x Time array (Time-sliced adjacency matrices) based on TDD-SBM (type == "discrete) or TDMM-SBM (type = "mixed") model
-# defaults to no degree correction (all dc_factors == 1)
-# for type "discrete" roles are a length-N vector of block assignments. For type "mixed" roles are a G x N matrix of assignment weights (and dc_factor is ignored)
+#' generate N x N x Time array (Time-sliced adjacency matrices) based on TDD-SBM (type == "discrete) or TDMM-SBM (type = "mixed") model
+#' @param roles If type is `discrete`, a length-N vector of block assignments. If type is `mixed` G x N matrix of block-assignment weights.
+#' If no names are given, will will be named 1:N.
+#' @param omega A K x K x Time array or Time-length list of K x K matrices. If the latter will be internall converted to array.
+#' If no degree-correction (`dc_factors = rep(1, N)`), omega represents mean block-to-block edge values. 
+#' With degree-correction (dc_factors differ from default) omega represent the sum of block-to-block edges.
+#' @param type `discrete` or `mixed` for tdd-sbm or tdmm-sbm, respectively. If mixed, dc_factors is ignored.
+#' @param dc_factors 
+# '   if no degree-correction is desired, omega represents mean block-to-block edge values.
+# '   otherwise, dc_factors are a list of degree-correction factors that should be normalized to sum to 1 within blocks
+# for type "mixed" roles are a G x N matrix of assignment weights 
 # (add this as a simulation function to sbmt package?)
-generate_multilayer_array <- function(N, Time, roles, omega, dc_factors = rep(1, N), type = "discrete") {
+#' @exa
+generate_multilayer_array <- function(roles, omega, dc_factors = rep(1, N), type = "discrete") {
+  
   # checks
+  if (length(unique(roles)) <= 1) stop("There should be at least two unique roles")
   if (type == "discrete" & !identical(dc_factors, rep(1, N))) {
-   if (! identical(aggregate(dc_factors ~ roles, FUN = "sum")[,2], rep(1, length(unique(roles))))) {
-     warning("degree correction factors not normalized to sum 1 by group")
-   }
+    if (! identical(aggregate(dc_factors ~ roles, FUN = "sum")[,2], rep(1, length(unique(roles))))) {
+      warning("degree correction factors not normalized to sum to 1 by block. will normalize now")
+      #normalize?
+      role_sums = aggregate(dc_factors, by = list(roles), sum)
+      role_sums = setNames(role_sums$x, role_sums$Group.1)
+      dc_factors = dc_factors/role_sums[roles] #group sum constraint
+      cat("dc_factors normalized:", dc_factors, "\n")
+      # check all(aggregate(dc_factors, by = list(roles), sum)$x == 1)
+    }
   }
+  
+  #  infer N, K, Time, node names
+  N = ifelse(is.null(dim(roles)), length(roles), nrow(roles))
+  K = ifelse(class(omega) == "list", nrow(omega[[1]]), dim(omega)[1]) # number of blocks
+  Time = ifelse(class(omega) == "list", length(omega[[1]]), dim(omega)[3])
+  omega = array(unlist(omega), dim = c(K,K,Time)) #make array if not already
+  if (is.null(names(roles))) {roles = setNames(roles, 1:N)}
+      
+  # adjusted omega (to account for normalization in degree correction) is expected total weight from r to s instead of expected edge weight from single edge from block r to block s, 
+  block_omega = omega*array(table(roles) %*% t(table(roles)), dim = c(K, K, Time))
   
   edge_array = array(0, dim = c(N, N, Time))
   for (i in 1:N) {
     role_i = roles[i]
     for (j in 1:N) {
       role_j = roles[j]
-      for (T in 1:Time) {
-          if (type == "discrete") { ijt = rpois(dc_factors[i]*dc_factors[j]*omega[role_i, role_j, Time], n= 1) }
+      for (Time in 1:Time) {
+          if (type == "discrete") { ijt = rpois(dc_factors[i]*dc_factors[j]*block_omega[role_i, role_j, Time], n= 1) }
           if (type == "mixed") { ijt = rpois(t(roles[, i])%*% omega[, , Time] %*% roles[, j], n= 1) }
           edge_array[i, j, Time] = ijt
       } 
@@ -45,31 +74,30 @@ generate_multilayer_array <- function(N, Time, roles, omega, dc_factors = rep(1,
   return(edge_array)
 }
 
-
 # ---------------------------------------------------------------------------------------------------------------
 # 0. Parameters ----
-# K_set (# block options), N_set (# node options), Time, n_sim, seed
+#   - K_set (# block options), N_set (# node options), Time, n_sim, seed ----
 
 K_set = c(2,3)
 N_set = c(30, 90)
 Time = 16 #use a power of two for compatibility with ppsbm hist method
-N_sim = 100
+N_sim = 10
 set.seed(1)
 kl_per_network = 10
 
-# omega ----
+#   - omega ----
 
 a = 10
 b = 5 
 ymax =  max(2*a, 2*b)
-x = seq(.5, T)
+x = seq(.5, Time)
 
 # show two-block curves
 par(mfrow = c(2, 2))
-curve(b*sin(x*pi/T) + b, 0, T, ylim = c(0, ymax))
-curve(a*sin(x*2*pi/T)+a, 0, T, ylim = c(0, ymax))
-curve(-a*sin(x*2*pi/T)+a, 0, T, ylim = c(0, ymax))
-curve(b*sin(x*pi/T)+ b, 0, T, ylim = c(0, ymax))
+curve(b*sin(x*pi/Time) + b, 0, Time, ylim = c(0, ymax))
+curve(a*sin(x*2*pi/Time)+a, 0, Time, ylim = c(0, ymax))
+curve(-a*sin(x*2*pi/Time)+a, 0, Time, ylim = c(0, ymax))
+curve(b*sin(x*pi/Time)+ b, 0, Time, ylim = c(0, ymax))
 
 # show three-block curves
 T = Time #set just for labeling, then remove
@@ -80,7 +108,7 @@ curve(b*sin(x*pi/T) + b, 0, T, ylim = c(0, ymax), main = ("1 to 1"), xlab = "")
 curve(a*sin(x*2*pi/T)+a, 0, T, ylim = c(0, ymax), main = ("1 to 2"), xlab = "")
 curve(a*sin(x*2*pi/T-1)/2+a, 0, T, ylim = c(0, ymax), main = ("1 to 3"), xlab = "")
 curve(-a*sin(x*2*pi/T)+a, 0, T, ylim = c(0, ymax), main = ("2 to 1"), xlab = "")
-curve(b*sin(x*pi/T)+ b, 0, T, ylim = c(0, ymax), main = ("2 to 1"), xlab = "")
+curve(b*sin(x*pi/T)+ b, 0, T, ylim = c(0, ymax), main = ("2 to 2"), xlab = "")
 curve(a*sin(x*2*pi/T-2)/4+a, 0, T, ylim = c(0, ymax), main = ("2 to 3"), xlab = "")
 curve(-a*sin(x*2*pi/T-1)/2+a, 0, T, ylim = c(0, ymax), main = ("3 to 1"), xlab = "")
 curve(-a*sin(x*2*pi/T-2)/4+a, 0, T, ylim = c(0, ymax), main = ("3 to 2"), xlab = "")
@@ -89,15 +117,15 @@ dev.off()
 rm(T)
 
 # show overlapping
-par(mfrow = c(1,1))
-curve(a*sin(x*2*pi/Time)+a, 0, Time, ylim = c(0, ymax))
-curve(-a*sin(x*2*pi/Time)+a, 0, Time, add = TRUE, lty = 2)
-curve(a*sin(x*2*pi/Time-1)/2+a, 0, Time, col = "blue", add = TRUE)
-curve(-a*sin(x*2*pi/Time-1)/2+a, 0, Time, col = "blue", add = TRUE, lty = 2)
-curve(a*sin(x*2*pi/Time-2)/4+a, 0, Time, col = "green", add = TRUE)
-curve(-a*sin(x*2*pi/Time-2)/4+a, 0, Time, col = "green", add = TRUE, lty = 2)
-curve(b*sin(x*pi/Time) + b, 0, Time, col = "red", add = TRUE)
-curve(0*x+b, 0, Time, col = "red", add = TRUE)
+# par(mfrow = c(1,1))
+# curve(a*sin(x*2*pi/Time)+a, 0, Time, ylim = c(0, ymax))
+# curve(-a*sin(x*2*pi/Time)+a, 0, Time, add = TRUE, lty = 2)
+# curve(a*sin(x*2*pi/Time-1)/2+a, 0, Time, col = "blue", add = TRUE)
+# curve(-a*sin(x*2*pi/Time-1)/2+a, 0, Time, col = "blue", add = TRUE, lty = 2)
+# curve(a*sin(x*2*pi/Time-2)/4+a, 0, Time, col = "green", add = TRUE)
+# curve(-a*sin(x*2*pi/Time-2)/4+a, 0, Time, col = "green", add = TRUE, lty = 2)
+# curve(b*sin(x*pi/Time) + b, 0, Time, col = "red", add = TRUE)
+# curve(0*x+b, 0, Time, col = "red", add = TRUE)
 
 omega_11 = b*sin(x*pi/Time) + b
 omega_12 =  a*sin(x*2*pi/Time)+a
@@ -114,19 +142,22 @@ omega_3 = array(rbind(omega_11, omega_21, omega_31,
                       omega_12, omega_22, omega_13,
                       omega_13, omega_23, omega_33), dim = c(3, 3, Time)) #left most index moves fastest
 
+#   - omega list ----
+
+#these versions of omega give the expected degree (without any degree correcton) of any edge from block g to block h at time t
 omega_list = list(omega_2, omega_3)
 
 
 # 1. Run tdd simulation to evaluate parameter estimation ----
 
 # tdd-sbm simulation function ----
-#note, assumes directed = TRUE and selfEdges = TRUE
 
 # generate discrete and mixed roles for use in simulation.
-# (Custom roles can also be fed to the simulation)
+# currently assumes directed = TRUE and selfEdges = TRUE
+# (custom roles can also be fed to the simulation)
 # roles: (discrete case) is an integer, indicating the possible blocks (roles) a user can have
 #        (mixed case) a matrix where each row is a C_i vector of block weights, indicating realized mixtures of blocks. (A small set for the purposes of simulation.)
-# rel_freq dictates relative frequency of the blocks (discrete case) or block-weight vectors (mixed cased), defaulting to as close as possible to equal groups
+# rel_freq: dictates relative frequency of the blocks (discrete case) or block-weight vectors (mixed cased), defaulting to as close as possible to equal groups
 
 generate_roles <- function(N, roles, type = c("discrete", "mixed")[1],
                            rel_freq = ifelse(type == "discrete", list(rep(1, roles)), list(rep(1, nrow(roles))))[[1]]) {
@@ -155,52 +186,69 @@ generate_roles <- function(N, roles, type = c("discrete", "mixed")[1],
 # dc_weights is the fraction of users in at each level (to be rounded to integers)
 generate_dc_factors <- function(roles, dc_levels, dc_weights) {
   
-  dc_factors = sapply(table(roles), rep_len, x=dc_levels)
-  dc_factors = sapply(dc_factors, function(x) {x/sum(x)}) #group sum constraint
+  dc_factors = lapply(table(roles), rep_len, x=dc_levels)
+  dc_factors = lapply(dc_factors, function(x) {x/sum(x)}) #group sum constraint
   dc_factors = as.vector(do.call("c", dc_factors))
   return(dc_factors)
 }
 
-roles = generate_roles(30, roles = 2, type = "discrete", rel_freq = c(.25,.75))
-dc_factors = generate_dc_factors(roles, dc_levels = c(1,2,3))
+# A function to generate and fit data from the tdd-sbm
+# currently for directed networks only
+# roles: N-vector with element in 1:K (K is number of blocks)
+# omega: K x K x T array
+# verbose: TRUE will show some intermediate plots
+# dc_fit: degree correction type for fitting the simulated data, defaults to dc used in data generation
 
-# for directed networks
-simulated_tdd <- function(N, roles, omega, Time, dc_factors = NULL, N_sim = 10, directed = TRUE, kl = kl_per_network) {
+simulated_tdd <- function(roles, omega, dc_factors = NULL, dc_fit = NULL, N_sim = 10, directed = TRUE, kl = kl_per_network, verbose = FALSE) {
   
-  #  set degree correction parameter based on presence of dc_factors
+  if (!directed) stop("Not yet implemented for undirected networks")
+  #  set degree correction parameter based on presence of dc_factors and dc_fit
   dc = ifelse(is.null(dc_factors), 0, 3)
+  dc_fit = ifelse(is.null(dc_fit), dc, dc_fit)
   
-  #set roles names ----
-  names(roles) = 1:N
-  
-  # adjusted omega (to account for normalization in degree correction) is expected total weight from r to s instead of expected edge weight from single edge from block r to block s, 
-  # useful for mixed omega also
-  block_omega = omega*array(table(roles) %*% t(table(roles)), dim = c(n_roles, n_roles, T))
-  
+  #  infer N, K, Time, node names
+  N = length(roles)
+  K = dim(omega)[2] # number of bloks
+  Time = dim(omega)[3]
+  if (is.null(names(roles)) {roles = setNames(roles, 1:N)}
+
   # ---------------------------------------------------------------------------------------------------------------
   # - fit sbmt ----
   
-  role_results = 1:N_sim
   tdd_sbm_ari = 1:N_sim
+  tdd_sbm_mape = 1:N_sim
   tdd_sbm_true = 1:N_sim
   tdd_sbm_sim = 1:N_sim
   
   for (s in 1:N_sim) {
     
+    # generate simulated networks
     if (dc == 0) { # no degree correction case  ----
-      discrete_edge_array = generate_multilayer_array(N, Time, roles, omega, type = "discrete")
+      discrete_edge_array = generate_multilayer_array(roles, omega, type = "discrete")
     }
     if (dc == 3) { # degree correction case  ----
-      discrete_edge_array = generate_multilayer_array(N, Time, roles, block_omega, dc_factors, type = "discrete")
+      discrete_edge_array = generate_multilayer_array(roles, block_omega, dc_factors, type = "discrete")
     }
     discrete_edge_list = adj_to_edgelist(discrete_edge_array, directed = TRUE, selfEdges = TRUE)
-    tdd_sbm = sbmt(discrete_edge_list, maxComms = n_roles, degreeCorrect = dc, directed = TRUE, klPerNetwork = kl_per_network)
-    plot(tdd_sbm)
+  
+    # fit simulated networks
+    tdd_sbm = sbmt(discrete_edge_list, maxComms = K, degreeCorrect = dc, directed = TRUE, klPerNetwork = kl_per_network)
+    
+    if (verbose) {
+      #plot
+      plot(tdd_sbm)
+      #points(1:Time, block_omega[K,K,], col = "red", add = T, type = "l")
+    }
+    
     # adjusted rand index
     tdd_sbm_ari[s] = adj.rand.index(tdd_sbm$FoundComms[order(as.numeric(names(tdd_sbm$FoundComms)))], roles)
+    
+    # MAPE of omega
+    tdd_sbm_mape[s] = mean(abs(sapply(tdd_sbm$EdgeMatrix, matrix) - apply(block_omega, 3, matrix))/apply(block_omega, 3, matrix))
+    
     # compare likelihood for true vs. fit parameters for simulated data
     tdd_sbm_true[s] = 
-      tdd_sbm_llik(discrete_edge_array, roles = roles-1, omega = block_omega, directed = TRUE, selfEdges = TRUE)
+      tdd_sbm_llik(discrete_edge_array, roles = roles - 1, omega = block_omega, directed = TRUE, selfEdges = TRUE)
     tdd_sbm_sim[s] = 
       tdd_sbm_llik(discrete_edge_array, roles = tdd_sbm$FoundComms, omega = tdd_sbm$EdgeMatrix, directed = TRUE, selfEdges = TRUE)
   }
@@ -209,15 +257,25 @@ simulated_tdd <- function(N, roles, omega, Time, dc_factors = NULL, N_sim = 10, 
   results = list(
     # role detection
     tdd_sbm_ari = tdd_sbm_ari,
+    # blcok-to-block activity detection
+    tdd_sbm_mape = tdd_sbm_mape,
     # compare likelihood of data under fit vs. true model
     tdd_sbm_true = tdd_sbm_true,
     tdd_sbm_sim = tdd_sbm_sim,
     tdd_true_vs_sim = tdd_sbm_true - tdd_sbm_sim
-    # add omega accuracy with curve distances?
   )
   
   return(results)
 }
+
+  # example:
+  # no degree hetereogeneity in data generation 
+  roles = generate_roles(30, roles = 2, type = "discrete", rel_freq = c(.5,.5))
+  results = simulated_tdd(roles, omega = omega_2)
+  # degree heterogeneity
+  dc_factors = generate_dc_factors(roles, dc_levels = c(1,2,3))
+  dc_results = simulated_tdd(roles, omega = omega_2, dc_factors)
+
 
 # run tdd-sbm simulation ----
 
@@ -225,12 +283,16 @@ td_results = vector(mode = "list", length = length(K_set))
 
 td_results = 
   lapply(1:length(K_set), function(i) {
-  n_roles = K_set[i]
+  K = K_set[i]
   omega = omega_list[[i]]
-    lapply(V, function(N) {
-      tdd_results_dc0 = simulated_tdd(N, n_roles, omega, Time, dc = 0, N_sim, kl = kl_per_network) 
-      tdd_results_dc3 = simulated_tdd(N, n_roles, omega, Time, dc = 3, N_sim, kl = kl_per_network) 
-    })
+  for(N in N_set) {
+    for (dc in c(0,3)) { #no degree correction, undirected, time-independent degree correction
+      roles = generate_roles(30, roles = 2, type = "discrete", rel_freq = rep(1/K, K))
+      lapply(V, function(N) {
+        tdd_results_dc0 = simulated_tdd(N, n_roles, omega, Time, dc = 0, N_sim, kl = kl_per_network) 
+        tdd_results_dc3 = simulated_tdd(N, n_roles, omega, Time, dc = 3, N_sim, kl = kl_per_network) 
+      })
+    }
   })
 
 
@@ -314,7 +376,7 @@ setwd("mixed_model_implementation_python")
 
 for (s in 1:N_sim) {
   
-  mixed_edge_array = generate_multilayer_array(N, Time, roles_mixed, block_omega, type = "mixed")
+  mixed_edge_array = generate_multilayer_array(roles_mixed, block_omega, type = "mixed")
   write.csv(mixed_edge_array, "../data/sim/mixed_edge_array.csv", row.names = FALSE)
   # run mixed
   system("python3 tdmm_sbm_sim_study.py")
