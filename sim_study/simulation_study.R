@@ -21,24 +21,34 @@ library(gtools) #for permutations
 
 #' generate N x N x Time array (Time-sliced adjacency matrices) based on TDD-SBM (type == "discrete) or TDMM-SBM (type = "mixed") model
 #' @param roles If type is `discrete`, a length-N vector of block assignments. If type is `mixed` G x N matrix of block-assignment weights.
-#' If no names are given, will will be named 1:N.
 #' @param omega A K x K x Time array or Time-length list of K x K matrices. If the latter will be internall converted to array.
-#' If no degree-correction (`dc_factors = rep(1, N)`), omega represents mean block-to-block edge values. 
+#' If no degree-correction (`dc_factors equal NULL or rep(1, N)`), omega represents mean block-to-block edge values. 
 #' With degree-correction (dc_factors differ from default) omega represent the sum of block-to-block edges.
 #' @param type `discrete` or `mixed` for tdd-sbm or tdmm-sbm, respectively. If mixed, dc_factors is ignored.
 #' @param dc_factors 
-# '   if no degree-correction is desired, omega represents mean block-to-block edge values.
+# '   if not degree-corrected, should be NULL or rep(1, N)
 # '   otherwise, dc_factors are a list of degree-correction factors that should be normalized to sum to 1 within blocks
 # for type "mixed" roles are a G x N matrix of assignment weights 
 # (add this as a simulation function to sbmt package?)
-#' @exa
-generate_multilayer_array <- function(roles, omega, dc_factors = rep(1, N), type = "discrete") {
+#' @examples 
+#' generate_multilayer_array(roles = rep(1:2, 5), omega = array(1:12, dim = c(2,2,3)), dc_factors = NULL, type = "discrete") #output 10 x 10 x 3
+#' generate_multilayer_array(roles = rep(1:2, 5), omega = array(1:12, dim = c(2,2,3)), dc_factors = 1:10, type = "discrete") #output 10 x 10 x 3
+generate_multilayer_array <- function(roles, omega, dc_factors = NULL, type = "discrete") {
   
+  #  infer N, K, Time,
+  N = ifelse(is.null(dim(roles)), length(roles), nrow(roles))
+  K = ifelse(class(omega) == "list", nrow(omega[[1]]), dim(omega)[1]) # number of blocks
+  Time = ifelse(class(omega) == "list", length(omega[[1]]), dim(omega)[3])
+  if(class(omega)!="array") {omega  = array(unlist(omega), dim = c(K,K,Time))} #make array if not already
+  #  degree-corrected?
+  if(is.null(dc_factors)) {dc_factors = rep(1, N)}
+  dc = ifelse(identical(dc_factors, rep(1, N)), FALSE, TRUE)
+         
   # checks
   if (length(unique(roles)) <= 1) stop("There should be at least two unique roles")
-  if (type == "discrete" & !identical(dc_factors, rep(1, N))) {
+  if (type == "discrete" & dc) {
     if (! identical(aggregate(dc_factors ~ roles, FUN = "sum")[,2], rep(1, length(unique(roles))))) {
-      warning("degree correction factors not normalized to sum to 1 by block. will normalize now")
+      warning("degree correction factors not normalized to sum to 1 by block. will normalize now.")
       #normalize?
       role_sums = aggregate(dc_factors, by = list(roles), sum)
       role_sums = setNames(role_sums$x, role_sums$Group.1)
@@ -47,16 +57,10 @@ generate_multilayer_array <- function(roles, omega, dc_factors = rep(1, N), type
       # check all(aggregate(dc_factors, by = list(roles), sum)$x == 1)
     }
   }
-  
-  #  infer N, K, Time, node names
-  N = ifelse(is.null(dim(roles)), length(roles), nrow(roles))
-  K = ifelse(class(omega) == "list", nrow(omega[[1]]), dim(omega)[1]) # number of blocks
-  Time = ifelse(class(omega) == "list", length(omega[[1]]), dim(omega)[3])
-  omega = array(unlist(omega), dim = c(K,K,Time)) #make array if not already
-  if (is.null(names(roles))) {roles = setNames(roles, 1:N)}
       
-  # adjusted omega (to account for normalization in degree correction) is expected total weight from r to s instead of expected edge weight from single edge from block r to block s, 
-  block_omega = omega*array(table(roles) %*% t(table(roles)), dim = c(K, K, Time))
+  # adjusted omega (to account for normalization in degree correction) 
+  # entries are expected total weight from r to s instead of expected edge weight from single edge from block r to block s
+  if(dc) {block_omega = omega*array(table(roles) %*% t(table(roles)), dim = c(K, K, Time))}
   
   edge_array = array(0, dim = c(N, N, Time))
   for (i in 1:N) {
@@ -64,7 +68,8 @@ generate_multilayer_array <- function(roles, omega, dc_factors = rep(1, N), type
     for (j in 1:N) {
       role_j = roles[j]
       for (Time in 1:Time) {
-          if (type == "discrete") { ijt = rpois(dc_factors[i]*dc_factors[j]*block_omega[role_i, role_j, Time], n= 1) }
+          if (type == "discrete" & dc) { ijt = rpois(dc_factors[i]*dc_factors[j]*block_omega[role_i, role_j, Time], n= 1) }
+          if (type == "discrete" & !dc) { ijt = rpois(dc_factors[i]*dc_factors[j]*omega[role_i, role_j, Time], n= 1) }
           if (type == "mixed") { ijt = rpois(t(roles[, i])%*% omega[, , Time] %*% roles[, j], n= 1) }
           edge_array[i, j, Time] = ijt
       } 
@@ -144,9 +149,8 @@ omega_3 = array(rbind(omega_11, omega_21, omega_31,
 
 #   - omega list ----
 
-#these versions of omega give the expected degree (without any degree correcton) of any edge from block g to block h at time t
+#these versions of omega give the expected degree (without any degree correcton) of any edge from block r to block s at time t
 omega_list = list(omega_2, omega_3)
-
 
 # 1. Run tdd simulation to evaluate parameter estimation ----
 
@@ -196,21 +200,20 @@ generate_dc_factors <- function(roles, dc_levels, dc_weights) {
 # currently for directed networks only
 # roles: N-vector with element in 1:K (K is number of blocks)
 # omega: K x K x T array
+# dc_factors: degree correction factors. If NULL or 
 # verbose: TRUE will show some intermediate plots
-# dc_fit: degree correction type for fitting the simulated data, defaults to dc used in data generation
 
-simulated_tdd <- function(roles, omega, dc_factors = NULL, dc_fit = NULL, N_sim = 10, directed = TRUE, kl = kl_per_network, verbose = FALSE) {
+
+simulated_tdd <- function(roles, omega, dc_factors = NULL, fit_method = c("tdd-sbm-0", "tdd-sbm-3", "ppsbm")[1], N_sim = 10, directed = TRUE, kl = kl_per_network, verbose = FALSE) {
   
   if (!directed) stop("Not yet implemented for undirected networks")
   #  set degree correction parameter based on presence of dc_factors and dc_fit
   dc = ifelse(is.null(dc_factors), 0, 3)
   dc_fit = ifelse(is.null(dc_fit), dc, dc_fit)
   
-  #  infer N, K, Time, node names
-  N = length(roles)
+  #  infer  K, Time
   K = dim(omega)[2] # number of bloks
   Time = dim(omega)[3]
-  if (is.null(names(roles)) {roles = setNames(roles, 1:N)}
 
   # ---------------------------------------------------------------------------------------------------------------
   # - fit sbmt ----
@@ -223,6 +226,7 @@ simulated_tdd <- function(roles, omega, dc_factors = NULL, dc_fit = NULL, N_sim 
   for (s in 1:N_sim) {
     
     # generate simulated networks
+    
     if (dc == 0) { # no degree correction case  ----
       discrete_edge_array = generate_multilayer_array(roles, omega, type = "discrete")
     }
