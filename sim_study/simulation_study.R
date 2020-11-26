@@ -21,7 +21,7 @@ library(gtools) #for permutations
 
 #' generate N x N x Time array (Time-sliced adjacency matrices) based on TDD-SBM (type == "discrete) or TDMM-SBM (type = "mixed") model
 #' @param roles If type is `discrete`, a length-N vector of block assignments. If type is `mixed` G x N matrix of block-assignment weights.
-#' @param omega A K x K x Time array or Time-length list of K x K matrices. If the latter will be internall converted to array.
+#' @param omega A K x K x Time array or Time-length list of K x K matrices. If the latter will be internally converted to array.
 #' If no degree-correction (`dc_factors is NULL`), omega represents mean block-to-block edge values. 
 #' With degree-correction (dc_factors differ from default) omega represent the sum of block-to-block edges.
 #' @param type `discrete` or `mixed` for tdd-sbm or tdmm-sbm, respectively. If mixed, dc_factors is ignored.
@@ -54,9 +54,9 @@ generate_multilayer_array <- function(roles, omega, dc_factors = NULL, type = "d
   
   #  infer N, K, Time,
   N = ifelse(is.null(dim(roles)), length(roles), nrow(roles))
-  K = ifelse(class(omega) == "list", nrow(omega[[1]]), dim(omega)[1]) # number of blocks
-  Time = ifelse(class(omega) == "list", length(omega[[1]]), dim(omega)[3])
-  if(class(omega)!="array") {omega  = array(unlist(omega), dim = c(K,K,Time))} #make array if not already
+  K = ifelse("list" %in% class(omega), nrow(omega[[1]]), dim(omega)[1]) # number of blocks
+  Time = ifelse("list" %in% class(omega), length(omega[[1]]), dim(omega)[3])
+  if(!"array" %in% class(omega)) {omega  = array(unlist(omega), dim = c(K,K,Time))} #make array if not already
   
   # adjusted omega (to account for normalization in degree correction) 
   # entries are expected total weight from r to s instead of expected edge weight from single edge from block r to block s
@@ -160,7 +160,7 @@ omega_list = list(omega_2, omega_3)
 # currently assumes directed = TRUE and selfEdges = TRUE
 # (custom roles can also be fed to the simulation)
 # roles: (discrete case) is an integer, indicating the possible blocks (roles) a user can have
-#        (mixed case) a matrix where each row is a C_i vector of block weights, indicating realized mixtures of blocks. (A small set for the purposes of simulation.)
+#        (mixed case) a matrix where each row is a C_i vector of block weights, indicating realized mixtures of blocks. (A small set for the purposes of simulation. Could also sample from a distribution with k-vector range)
 # rel_freq: dictates relative frequency of the blocks (discrete case) or block-weight vectors (mixed cased), defaulting to as close as possible to equal groups
 
 generate_roles <- function(N, roles, type = c("discrete", "mixed")[1],
@@ -172,23 +172,21 @@ generate_roles <- function(N, roles, type = c("discrete", "mixed")[1],
   } else { #type mixed
     times = ceiling(rel_freq*N)
     roles = roles[rep(1:length(times),times),][1:N,] #only up to first N elements in case of rounding
+    roles = roles/colSums(roles)
   }
   return(roles)
 }
 
   # examples:
-  #   generate_roles(30, roles = 2, type = "discrete", rel_freq = rep(1, 2))
-  #   generate_roles(30, roles = 2, type = "discrete", rel_freq = c(.25,.75))
-  #   generate_roles(30, roles = 3, type = "discrete", rel_freq = c(1/6,2/6,3/6))
-  #   n_roles = 3
-  #   mixed_roles = matrix(c(0,.25,.75)[permutations(n_roles, n_roles)],factorial(n_roles),n_roles)
-  #   generate_roles(30, roles = mixed_roles, type = "mixed", rel_freq = rep(1,6))
-  #   generate_roles(30, roles = mixed_roles, type = "mixed", rel_freq = 1:6)
+    # generate_roles(30, roles = 2, type = "discrete", rel_freq = c(.5,.5))
+    # generate_roles(30, roles = 3, type = "discrete", rel_freq = c(1,2,3))
+    # mixed_role_options = matrix(c(0,.25,.75)[permutations(3, 3)],factorial(3),3)
+    # generate_roles(30, roles = mixed_role_options, type = "mixed", rel_freq = rep(1,6))
+    # generate_roles(30, roles = mixed_role_options, type = "mixed", rel_freq = 1:6)
 
 # roles are the discrete roles of the nodes (which also tells us N)
-# dc_levels is preset relative activity level we use for degree correction
-# dc_weights is the fraction of users in at each level (to be rounded to integers)
-generate_dc_factors <- function(roles, dc_levels, dc_weights) {
+# dc_levels is preset relative activity level we use for degree correction. They will be cycled through within each role.
+generate_dc_factors <- function(roles, dc_levels) {
   
   dc_factors = lapply(table(roles), rep_len, x=dc_levels)
   dc_factors = lapply(dc_factors, function(x) {x/sum(x)}) #group sum constraint
@@ -196,23 +194,33 @@ generate_dc_factors <- function(roles, dc_levels, dc_weights) {
   return(dc_factors)
 }
 
+  # examples
+  roles = generate_roles(30, roles = 2, type = "discrete", rel_freq = c(.5,.5))
+  generate_dc_factors(roles, dc_levels = c(1,2,3))
+
 # A function to generate and fit data from the tdd-sbm
 # currently for directed networks only
 # roles: N-vector with element in 1:K (K is number of blocks)
 # omega: K x K x T array
 # dc_factors: degree correction factors. If NULL or 
+# sim_method: method used to simulate data. Last numeric of tdd-sbm- is 0 for no degree correction, 3 for time independent undirected degree correction.
+# fit_method: method used to fit the simulated data
 # verbose: TRUE will show some intermediate plots
-
-simulate_tdd <- function(roles, omega, dc_factors = NULL, fit_method = c("tdd-sbm-0", "tdd-sbm-3", "ppsbm")[1], N_sim = 10, directed = TRUE, kl = kl_per_network, verbose = FALSE) {
+simulate_tdd <- function(roles, omega,  dc_factors = NULL, 
+                         sim_method = c("tdd-sbm-0", "tdd-sbm-3")[1], 
+                         fit_method = c("tdd-sbm-0", "tdd-sbm-3", "ppsbm")[1], 
+                         N_sim = 10, directed = TRUE, kl = kl_per_network, verbose = FALSE) {
   
+  #checks 
   if (!directed) stop("Not yet implemented for undirected networks")
+  if (sim_method=="tdd-sbm-3" & is.null(dc_factors)) stop("Sim method tdd-sbm-3 requires dc_factors")
+  if(!"array" %in% class(omega)) {omega  = array(unlist(omega), dim = c(K,K,Time))} #make omega an array if not already
   
-  #  infer  K, Time
+  #  infer  K, Time, degree correction parameter
   K = dim(omega)[2] # number of bloks
   Time = dim(omega)[3]
-  
-  #  set degree correction parameter for generating data based on presence of dc_factors
-  dc = ifelse(is.null(dc_factors), 0, 3)
+  dc_sim = as.numeric(gsub(sim_method, pattern = "tdd-sbm-", replacement=""))
+  dc_fit = as.numeric(gsub(fit_method, pattern = "tdd-sbm-", replacement=""))
 
   # ---------------------------------------------------------------------------------------------------------------
   # - fit sbmt ----
@@ -226,18 +234,18 @@ simulate_tdd <- function(roles, omega, dc_factors = NULL, fit_method = c("tdd-sb
     
     # generate simulated networks
     
-    if (dc == 0) { # no degree correction case  ----
+    if (sim_method == "tdd-sbm-0") { # no degree correction case  ----
       discrete_edge_array = generate_multilayer_array(roles, omega, type = "discrete")
     }
-    if (dc == 3) { # degree correction case  ----
+    if (sim_method == "tdd-sbm-3") { # degree correction case  ----
       discrete_edge_array = generate_multilayer_array(roles, omega, dc_factors, type = "discrete")
     }
     discrete_edge_list = adj_to_edgelist(discrete_edge_array, directed = TRUE, selfEdges = TRUE)
   
     # fit simulated networks
-    if (fit_method == "tdd-sbm-0"|fit_method == "tdd-sbm-3") {
+    if (grepl(fit_method, pattern = "tdd-sbm")) {
       
-      tdd_sbm = sbmt(discrete_edge_list, maxComms = K, degreeCorrect = dc, directed = TRUE, klPerNetwork = kl_per_network)
+      tdd_sbm = sbmt(discrete_edge_list, maxComms = K, degreeCorrect = dc_fit, directed = TRUE, klPerNetwork = kl_per_network)
       
       # optional plotting
       if (verbose) {
@@ -250,13 +258,14 @@ simulate_tdd <- function(roles, omega, dc_factors = NULL, fit_method = c("tdd-sb
       tdd_sbm_ari[s] = adj.rand.index(tdd_sbm$FoundComms[order(as.numeric(names(tdd_sbm$FoundComms)))], roles)
     
       # MAPE of omega
+      block_omega = omega*array(table(roles) %*% t(table(roles)), dim = c(K, K, Time))
       tdd_sbm_mape[s] = mean(abs(sapply(tdd_sbm$EdgeMatrix, matrix) - apply(block_omega, 3, matrix))/apply(block_omega, 3, matrix))
     
       # compare likelihood for true vs. fit parameters for simulated data
-      tdd_sbm_true[s] = tdd_sbm_llik(discrete_edge_array, roles = roles - 1, omega = block_omega, directed = TRUE, selfEdges = TRUE)
-      tdd_sbm_sim[s] = tdd_sbm_llik(discrete_edge_array, roles = tdd_sbm$FoundComms, omega = tdd_sbm$EdgeMatrix, directed = TRUE, selfEdges = TRUE)
+      tdd_sbm_true[s] = tdd_sbm_llik(discrete_edge_array, roles = roles - 1, omega = block_omega, degreeCorrect = dc_fit, directed = TRUE, selfEdges = TRUE)
+      tdd_sbm_sim[s] = tdd_sbm_llik(discrete_edge_array, roles = tdd_sbm$FoundComms, omega = tdd_sbm$EdgeMatrix, degreeCorrect = dc_sim, directed = TRUE, selfEdges = TRUE)
     }
-  
+
   }
   
   # - results ----
@@ -277,10 +286,12 @@ simulate_tdd <- function(roles, omega, dc_factors = NULL, fit_method = c("tdd-sb
   # example:
   # no degree hetereogeneity in data generation 
   roles = generate_roles(30, roles = 2, type = "discrete", rel_freq = c(.5,.5))
-  results = simulate_tdd(roles, omega = omega_2, dc_factors = NULL, fit_method = "tdd-sbm-0")
+  results00 = simulate_tdd(roles, omega = omega_2, sim_method = "tdd-sbm-0", fit_method = "tdd-sbm-0")
+  results03 = simulate_tdd(roles, omega = omega_2, sim_method = "tdd-sbm-0", fit_method = "tdd-sbm-3")
   # degree heterogeneity
-  dc_factors = generate_dc_factors(roles, dc_levels = c(1,2,3))
-  dc_results = simulate_tdd(roles, omega = omega_2, dc_factors)
+  dc_fctrs = generate_dc_factors(roles, dc_levels = c(1:5))
+  results30 = simulate_tdd(roles, omega = omega_2, dc_factors = dc_fctrs, sim_method = "tdd-sbm-3", fit_method = "tdd-sbm-0")
+  results33 = simulate_tdd(roles, omega = omega_2, dc_factors = dc_fctrs, sim_method = "tdd-sbm-3", fit_method = "tdd-sbm-3")
 
 
 # run tdd-sbm simulation ----
