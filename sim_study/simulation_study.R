@@ -14,6 +14,7 @@
 # libraries ----
 # devtools::install_github("jcarlen/sbm", subdir = "sbmt") 
 library(sbmt)
+library(ppsbm)
 library(fossil) #for adj rand index
 library(gtools) #for permutations
 
@@ -219,13 +220,13 @@ simulate_tdd <- function(roles, omega,  dc_factors = NULL,
   #make omega an array if not already
   if(!"array" %in% class(omega)) {omega  = array(unlist(omega), dim = c(nrow(omega[[1]]),nrow(omega[[1]]),length(omega)))} 
   
-  #  infer  K, Time, degree correction parameter
+  #  infer  K, N, Time, degree correction parameter
   K = dim(omega)[2] # number of bloks
+  N = length(roles)
   Time = dim(omega)[3]
   dc_sim = as.numeric(gsub(sim_method, pattern = "tdd-sbm-", replacement=""))
   dc_fit = as.numeric(gsub(fit_method, pattern = "tdd-sbm-", replacement=""))
-  
-  # one more check
+  block_omega = omega*array(table(roles) %*% t(table(roles)), dim = c(K, K, Time))
   
   # ---------------------------------------------------------------------------------------------------------------
   # - fit sbmt ----
@@ -234,12 +235,12 @@ simulate_tdd <- function(roles, omega,  dc_factors = NULL,
   tdd_sbm_mape = 1:N_sim
   tdd_sbm_sim = 1:N_sim
   tdd_sbm_fit = 1:N_sim
-  
+  tdd_sbm_est_K = rep(NA, N_sim) #only filled in for ppsbm
+    
   for (s in 1:N_sim) {
     
     # generate simulated networks
-    
-    if (sim_method == "tdd-sbm-0") { # no degree correction case  ----
+    if (sim_method == "tdd-sbm-0") { # no degree correction (when generating data) case  ----
       discrete_edge_array = generate_multilayer_array(roles, omega, type = "discrete")
     }
     if (sim_method == "tdd-sbm-3") { # degree correction case  ----
@@ -251,7 +252,7 @@ simulate_tdd <- function(roles, omega,  dc_factors = NULL,
     if (grepl(fit_method, pattern = "tdd-sbm")) {
       
       
-      # print each fit;s progress?
+      # print each fit's progress?
       if (verbose) {
         tdd_sbm = sbmt(discrete_edge_list, maxComms = K, degreeCorrect = dc_fit, directed = TRUE, klPerNetwork = kl_per_network)
       } else {
@@ -269,14 +270,47 @@ simulate_tdd <- function(roles, omega,  dc_factors = NULL,
       tdd_sbm_ari[s] = adj.rand.index(tdd_sbm$FoundComms[order(as.numeric(names(tdd_sbm$FoundComms)))], roles)
     
       # MAPE of omega
-      block_omega = omega*array(table(roles) %*% t(table(roles)), dim = c(K, K, Time))
       tdd_sbm_mape[s] = mean(abs(sapply(tdd_sbm$EdgeMatrix, matrix) - apply(block_omega, 3, matrix))/apply(block_omega, 3, matrix))
     
       # compare likelihood for true vs. fit parameters for simulated data
       tdd_sbm_sim[s] = tdd_sbm_llik(discrete_edge_array, roles = roles - 1, omega = block_omega, degreeCorrect = dc_sim, directed = TRUE, selfEdges = TRUE)
       tdd_sbm_fit[s] = tdd_sbm_llik(discrete_edge_array, roles = tdd_sbm$FoundComms, omega = tdd_sbm$EdgeMatrix, degreeCorrect = dc_fit, directed = TRUE, selfEdges = TRUE)
     }
+    if (fit_method == "ppsbm") {
+      # - fit ppsbm ----
+      
+      # Use the "hist" method because agrees more closely with out discrete Time slices and requires less manipulation
+      #reformat data for ppsbm fit
+      Nijk = sapply(adj_to_edgelist(discrete_edge_array, directed = TRUE, selfEdges = FALSE, removeZeros = FALSE), "[[", 3)
+      #dim(Nijk) #should have ncol == Time
+      
+      #ppsbm_fit
+      # number of blocks to try -- for this study look between 1 and 4
+      min_K = 1 # -- can index later by K (true) and selected_K as long as min_K is 1
+      max_K = 4
+      ppsbm = mainVEM(list(Nijk=Nijk,Time=Time), N, Qmin = min_K, Qmax = max_K, directed=TRUE,
+                      method='hist', d_part=5, n_perturb=10, n_random=0)
 
+      selected_K = modelSelection_Q(list(Nijk=Nijk,Time=Time), N, Qmin = min_K, Qmax = max_K, directed = TRUE, sparse = FALSE, ppsbm)$Qbest
+      # selected K
+      # ppsbm_roles = apply(ppsbm[[selected_K]]$tau, 2, which.max) #est roles
+      # par(mfrow = c(selected_K, selected_K));  apply(exp(ppsbm[[selected_K]]$logintensities.ql), 1, plot, type = "l")
+      tdd_sbm_est_K[s] = selected_K
+      
+      # true K
+      # role detection
+      ppsbm_roles_K = apply(ppsbm[[K]]$tau, 2, which.max)
+      tdd_sbm_ari[s] = adj.rand.index(apply(ppsbm[[K]]$tau, 2, which.max), roles)
+      # omegas 
+      ppsbm_omega = exp(array(ppsbm[[K]]$"logintensities.ql", dim = c(K, K, Time)))
+      ppsbm_block_omega = ppsbm_omega*array(table(ppsbm_roles_K) %*% t(table(ppsbm_roles_K)), dim = c(K, K, Time))
+
+      tdd_sbm_mape[s] = mean(abs(ppsbm_block_omega - block_omega)/(block_omega))
+      # use selfEdges FALSE since ppsbm fits without them? (but then adjust tdd_sbm block omega?)
+      tdd_sbm_sim[s] = tdd_sbm_llik(discrete_edge_array, roles = roles - 1, omega = block_omega, degreeCorrect = dc_sim, directed = TRUE, selfEdges = TRUE)
+      tdd_sbm_fit[s] = tdd_sbm_llik(discrete_edge_array, roles = ppsbm_roles_K, omega = ppsbm_block_omega, degreeCorrect = 0, directed = TRUE, selfEdges = TRUE)
+    }
+  
   }
   
   # - results ----
@@ -288,7 +322,8 @@ simulate_tdd <- function(roles, omega,  dc_factors = NULL,
     # compare likelihood of data under fit vs. true model
     tdd_sbm_sim = tdd_sbm_sim,
     tdd_sbm_fit = tdd_sbm_fit,
-    tdd_sim_vs_fit_method = tdd_sbm_sim - tdd_sbm_fit
+    tdd_sim_vs_fit_method = tdd_sbm_fit - tdd_sbm_sim,
+    tdd_sbm_est_K = tdd_sbm_est_K
   )
   
   return(results)
@@ -308,15 +343,15 @@ simulate_tdd <- function(roles, omega,  dc_factors = NULL,
 #   run tdd-sbm simulation ----
 
 tdd_results_30 = data.frame(expand.grid(K = K_set, N = N_set[1], sim_method = c("tdd-sbm-0", "tdd-sbm-3"), 
-                                        fit_method = c("tdd-sbm-0", "tdd-sbm-3"))) #"ppsbm"
+                                        fit_method = c("tdd-sbm-0", "tdd-sbm-3", "ppsbm")))
 tdd_results_90 = data.frame(expand.grid(K = K_set, N = N_set[2], sim_method = c("tdd-sbm-0", "tdd-sbm-3"), 
-                                        fit_method = c("tdd-sbm-0", "tdd-sbm-3"))) #"ppsbm"
+                                        fit_method = c("tdd-sbm-0", "tdd-sbm-3", "ppsbm")))
 
-tdd_results = apply(tdd_results_30[3,], 1, function(x) {
+tdd_results = apply(tdd_results_30, 1, function(x) {
   cat("running for parameters:", x,"\n")
   K = as.numeric(x['K'])
   roles = generate_roles(N = as.numeric(x['N']), role_types = K, type = "discrete", rel_freq = rep(1/K, K))
-  omega = omega_list[as.character(K)]
+  omega = omega_list[as.character(K)][[1]]
   dc_fctrs = generate_dc_factors(roles, dc_levels = c(1:5))
   results = simulate_tdd(roles, omega, dc_fctrs, sim_method = x[['sim_method']], fit_method = x[['fit_method']],
                           N_sim = 10, verbose = FALSE)
@@ -325,8 +360,8 @@ tdd_results = apply(tdd_results_30[3,], 1, function(x) {
 
 # Add results to summary table
 
-tdd_results_30$`Degree correct (true)` = !grepl(tdd_results_30$fit_method, pattern = "-0")
-tdd_results_30$`Degree correct (fit)` = !grepl(tdd_results_30$sim_method, pattern = "-0")
+tdd_results_30$`Degree correct (true)` = !grepl(tdd_results_30$fit_method, pattern = "-0|ppsbm")
+tdd_results_30$`Degree correct (fit)` = !grepl(tdd_results_30$sim_method, pattern = "-0|ppsbm")
 
 tdd_results_mean = lapply(tdd_results, function(x) {sapply(x, mean)})
 tdd_results_sd = lapply(tdd_results, function(x) {sapply(x, sd)})
@@ -338,46 +373,10 @@ tdd_results_30$LLIK_diff = paste0(round(sapply(tdd_results_mean, "[[", "tdd_sim_
 
 tdd_results_30 = tdd_results_30[,!names(tdd_results_30) %in% c("sim_method","fit_method")]
 
+# ppsbm, no degree correction case. their model works as expected ----
+
+
 # ---------------------------------------------------------------------------------------------------------------
-# 2. ppsbm to show impact of degree correction ----
-library(ppsbm)
-
-# no degree correction case. their model works as expected ----
-# - fit ppsbm ----
-
-# Use the "hist" method because agrees more closely with out discrete Time slices and requires little data manipulation
-
-Nijk = sapply(adj_to_edgelist(discrete_edge_array, directed = TRUE, selfEdges = FALSE, removeZeros = FALSE), "[[", 3); dim(Nijk)
-discrete_ppsbm = mainVEM(list(Nijk=Nijk,Time=Time), N, Qmin = 1, Qmax = 4, directed=TRUE, 
-                         method='hist', d_part=5, n_perturb=10, n_random=0)
-
-# - results ----
-
-# number of blocks selected
-selected_Q = modelSelection_Q(list(Nijk=Nijk,Time=Time), N, Qmin = 1, Qmax = 4, directed = TRUE, sparse = FALSE, discrete_ppsbm)$Qbest
-selected_Q
-selected_Q == n_roles #should equal n_roles
-
-# role detection
-apply(discrete_ppsbm[[selected_Q]]$tau, 2, which.max)
-adj.rand.index(apply(discrete_ppsbm[[selected_Q]]$tau, 2, which.max), roles)
-
-# omegas
-par(mfrow = c(n_roles, n_roles))
-apply(exp(discrete_ppsbm[[selected_Q]]$logintensities.ql), 1, plot, type = "l")
-
-# degree correction case ----
-# - fit ppsbm ----
-
-dc_Nijk = sapply(adj_to_edgelist(dc_discrete_edge_array, directed = TRUE, selfEdges = FALSE, removeZeros = FALSE), "[[", 3); dim(dc_Nijk)
-dc_discrete_ppsbm = mainVEM(list(Nijk=dc_Nijk,Time=Time), N, Qmin = 1, Qmax = 6, directed=TRUE, 
-                            method='hist', d_part=5, n_perturb=10, n_random=0)
-# - results ----
-
-# number of blocks selected
-selected_Q = modelSelection_Q(list(Nijk=dc_Nijk,Time=Time), N, Qmin = 1, Qmax = 6, directed = TRUE, sparse = FALSE, dc_discrete_ppsbm)$Qbest
-selected_Q
-selected_Q == n_roles
 
 # role detection
 
@@ -386,8 +385,8 @@ apply(dc_discrete_ppsbm[[selected_Q]]$tau, 2, which.max)
 adj.rand.index(apply(dc_discrete_ppsbm[[selected_Q]]$tau, 2, which.max), roles)
 
 # omegas
-par(mfrow = c(selected_Q, selected_Q)); par(mai = rep(.5, 4))
-apply(exp(dc_discrete_ppsbm[[selected_Q]]$logintensities.ql), 1, plot, type = "l", col = "blue")
+# par(mfrow = c(selected_Q, selected_Q)); par(mai = rep(.5, 4))
+# apply(exp(ppsbm[[selected_Q]]$logintensities.ql), 1, plot, type = "l", col = "blue")
 
 # with true number of groups? gets it right
 apply(dc_discrete_ppsbm[[n_roles]]$tau, 2, which.max)
