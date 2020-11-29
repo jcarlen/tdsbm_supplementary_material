@@ -150,39 +150,39 @@ omega_3 = array(rbind(omega_11, omega_21, omega_31,
 #   - omega list ----
 
 #these versions of omega give the expected degree (without any degree correcton) of any edge from block r to block s at time t
-omega_list = list(omega_2, omega_3)
+omega_list = list(`2` = omega_2, `3` = omega_3)
 
-# 1. Run tdd simulation to evaluate parameter estimation ----
+# 1. tdd simulation ----
 
-# tdd-sbm simulation function ----
+#   tdd-sbm simulation helper functions ----
 
 # generate discrete and mixed roles for use in simulation.
 # currently assumes directed = TRUE and selfEdges = TRUE
 # (custom roles can also be fed to the simulation)
-# roles: (discrete case) is an integer, indicating the possible blocks (roles) a user can have
+# role_types: (discrete case) is an integer, indicating the possible blocks (roles) a user can have
 #        (mixed case) a matrix where each row is a C_i vector of block weights, indicating realized mixtures of blocks. (A small set for the purposes of simulation. Could also sample from a distribution with k-vector range)
 # rel_freq: dictates relative frequency of the blocks (discrete case) or block-weight vectors (mixed cased), defaulting to as close as possible to equal groups
 
-generate_roles <- function(N, roles, type = c("discrete", "mixed")[1],
+generate_roles <- function(N, role_types, type = c("discrete", "mixed")[1],
                            rel_freq = ifelse(type == "discrete", list(rep(1, roles)), list(rep(1, nrow(roles))))[[1]]) {
   if (!type %in% c("discrete", "mixed")) {stop("type must be discrete or mixed")}
   rel_freq = rel_freq/sum(rel_freq)
   if (type == "discrete") {
-    roles = rep(1:roles, times = ceiling(N*rel_freq))[1:N] #only up to first N elements in case of rounding
+    roles = rep(1:role_types, times = ceiling(N*rel_freq))[1:N] #only up to first N elements in case of rounding
   } else { #type mixed
     times = ceiling(rel_freq*N)
-    roles = roles[rep(1:length(times),times),][1:N,] #only up to first N elements in case of rounding
+    roles = role_types[rep(1:length(times),times),][1:N,] #only up to first N elements in case of rounding
     roles = roles/colSums(roles)
   }
   return(roles)
 }
 
   # examples:
-    # generate_roles(30, roles = 2, type = "discrete", rel_freq = c(.5,.5))
-    # generate_roles(30, roles = 3, type = "discrete", rel_freq = c(1,2,3))
+    # generate_roles(30, role_types = 2, type = "discrete", rel_freq = c(.5,.5))
+    # generate_roles(30, role_types = 3, type = "discrete", rel_freq = c(1,2,3))
     # mixed_role_options = matrix(c(0,.25,.75)[permutations(3, 3)],factorial(3),3)
-    # generate_roles(30, roles = mixed_role_options, type = "mixed", rel_freq = rep(1,6))
-    # generate_roles(30, roles = mixed_role_options, type = "mixed", rel_freq = 1:6)
+    # generate_roles(30, role_types = mixed_role_options, type = "mixed", rel_freq = rep(1,6))
+    # generate_roles(30, role_types = mixed_role_options, type = "mixed", rel_freq = 1:6)
 
 # roles are the discrete roles of the nodes (which also tells us N)
 # dc_levels is preset relative activity level we use for degree correction. They will be cycled through within each role.
@@ -195,17 +195,19 @@ generate_dc_factors <- function(roles, dc_levels) {
 }
 
   # examples
-  roles = generate_roles(30, roles = 2, type = "discrete", rel_freq = c(.5,.5))
+  roles = generate_roles(30, role_types = 2, type = "discrete", rel_freq = c(.5,.5))
   generate_dc_factors(roles, dc_levels = c(1,2,3))
 
+#   tdd-sbm simulation function ----
+  
 # A function to generate and fit data from the tdd-sbm
 # currently for directed networks only
-# roles: N-vector with element in 1:K (K is number of blocks)
-# omega: K x K x T array
-# dc_factors: degree correction factors. If NULL or 
+# roles: N-vector with element in 1:K (K is number of blocks) used for simulating data.
+# omega: K x K x T array used for simulating data.
+# dc_factors: degree correction factors for simulating data. If "tdd-sbm-0" this is not used.
 # sim_method: method used to simulate data. Last numeric of tdd-sbm- is 0 for no degree correction, 3 for time independent undirected degree correction.
 # fit_method: method used to fit the simulated data
-# verbose: TRUE will show some intermediate plots
+# verbose: TRUE will show model fit progress and some intermediate plots
 simulate_tdd <- function(roles, omega,  dc_factors = NULL, 
                          sim_method = c("tdd-sbm-0", "tdd-sbm-3")[1], 
                          fit_method = c("tdd-sbm-0", "tdd-sbm-3", "ppsbm")[1], 
@@ -214,21 +216,24 @@ simulate_tdd <- function(roles, omega,  dc_factors = NULL,
   #checks 
   if (!directed) stop("Not yet implemented for undirected networks")
   if (sim_method=="tdd-sbm-3" & is.null(dc_factors)) stop("Sim method tdd-sbm-3 requires dc_factors")
-  if(!"array" %in% class(omega)) {omega  = array(unlist(omega), dim = c(K,K,Time))} #make omega an array if not already
+  #make omega an array if not already
+  if(!"array" %in% class(omega)) {omega  = array(unlist(omega), dim = c(nrow(omega[[1]]),nrow(omega[[1]]),length(omega)))} 
   
   #  infer  K, Time, degree correction parameter
   K = dim(omega)[2] # number of bloks
   Time = dim(omega)[3]
   dc_sim = as.numeric(gsub(sim_method, pattern = "tdd-sbm-", replacement=""))
   dc_fit = as.numeric(gsub(fit_method, pattern = "tdd-sbm-", replacement=""))
-
+  
+  # one more check
+  
   # ---------------------------------------------------------------------------------------------------------------
   # - fit sbmt ----
   
   tdd_sbm_ari = 1:N_sim
   tdd_sbm_mape = 1:N_sim
-  tdd_sbm_true = 1:N_sim
   tdd_sbm_sim = 1:N_sim
+  tdd_sbm_fit = 1:N_sim
   
   for (s in 1:N_sim) {
     
@@ -245,12 +250,18 @@ simulate_tdd <- function(roles, omega,  dc_factors = NULL,
     # fit simulated networks
     if (grepl(fit_method, pattern = "tdd-sbm")) {
       
-      tdd_sbm = sbmt(discrete_edge_list, maxComms = K, degreeCorrect = dc_fit, directed = TRUE, klPerNetwork = kl_per_network)
       
+      # print each fit;s progress?
+      if (verbose) {
+        tdd_sbm = sbmt(discrete_edge_list, maxComms = K, degreeCorrect = dc_fit, directed = TRUE, klPerNetwork = kl_per_network)
+      } else {
+        log = capture.output({tdd_sbm = sbmt(discrete_edge_list, maxComms = K, degreeCorrect = dc_fit, directed = TRUE, klPerNetwork = kl_per_network)})
+      }
+    
       # optional plotting
       if (verbose) {
         #plot
-        plot(tdd_sbm)
+        plot(tdd_sbm, show_reverse = FALSE)
         #points(1:Time, block_omega[K,K,], col = "red", add = T, type = "l")
       }
 
@@ -262,8 +273,8 @@ simulate_tdd <- function(roles, omega,  dc_factors = NULL,
       tdd_sbm_mape[s] = mean(abs(sapply(tdd_sbm$EdgeMatrix, matrix) - apply(block_omega, 3, matrix))/apply(block_omega, 3, matrix))
     
       # compare likelihood for true vs. fit parameters for simulated data
-      tdd_sbm_true[s] = tdd_sbm_llik(discrete_edge_array, roles = roles - 1, omega = block_omega, degreeCorrect = dc_fit, directed = TRUE, selfEdges = TRUE)
-      tdd_sbm_sim[s] = tdd_sbm_llik(discrete_edge_array, roles = tdd_sbm$FoundComms, omega = tdd_sbm$EdgeMatrix, degreeCorrect = dc_sim, directed = TRUE, selfEdges = TRUE)
+      tdd_sbm_sim[s] = tdd_sbm_llik(discrete_edge_array, roles = roles - 1, omega = block_omega, degreeCorrect = dc_sim, directed = TRUE, selfEdges = TRUE)
+      tdd_sbm_fit[s] = tdd_sbm_llik(discrete_edge_array, roles = tdd_sbm$FoundComms, omega = tdd_sbm$EdgeMatrix, degreeCorrect = dc_fit, directed = TRUE, selfEdges = TRUE)
     }
 
   }
@@ -275,9 +286,9 @@ simulate_tdd <- function(roles, omega,  dc_factors = NULL,
     # blcok-to-block activity detection
     tdd_sbm_mape = tdd_sbm_mape,
     # compare likelihood of data under fit vs. true model
-    tdd_sbm_true = tdd_sbm_true,
     tdd_sbm_sim = tdd_sbm_sim,
-    tdd_true_vs_sim = tdd_sbm_true - tdd_sbm_sim
+    tdd_sbm_fit = tdd_sbm_fit,
+    tdd_sim_vs_fit_method = tdd_sbm_sim - tdd_sbm_fit
   )
   
   return(results)
@@ -285,33 +296,47 @@ simulate_tdd <- function(roles, omega,  dc_factors = NULL,
 
   # example:
   # no degree hetereogeneity in data generation 
-  roles = generate_roles(30, roles = 2, type = "discrete", rel_freq = c(.5,.5))
-  results00 = simulate_tdd(roles, omega = omega_2, sim_method = "tdd-sbm-0", fit_method = "tdd-sbm-0")
-  results03 = simulate_tdd(roles, omega = omega_2, sim_method = "tdd-sbm-0", fit_method = "tdd-sbm-3")
-  # degree heterogeneity
+  # roles = generate_roles(30, role_types = 2, type = "discrete", rel_freq = c(.5,.5))
+  # results00 = simulate_tdd(roles, omega = omega_2, sim_method = "tdd-sbm-0", fit_method = "tdd-sbm-0")
+  # results03 = simulate_tdd(roles, omega = omega_2, sim_method = "tdd-sbm-0", fit_method = "tdd-sbm-3")
+  # # degree heterogeneity
+  # dc_fctrs = generate_dc_factors(roles, dc_levels = c(1:5))
+  # results30 = simulate_tdd(roles, omega = omega_2, dc_factors = dc_fctrs, sim_method = "tdd-sbm-3", fit_method = "tdd-sbm-0")
+  # results33 = simulate_tdd(roles, omega = omega_2, dc_factors = dc_fctrs, sim_method = "tdd-sbm-3", fit_method = "tdd-sbm-3")
+
+
+#   run tdd-sbm simulation ----
+
+tdd_results_30 = data.frame(expand.grid(K = K_set, N = N_set[1], sim_method = c("tdd-sbm-0", "tdd-sbm-3"), 
+                                        fit_method = c("tdd-sbm-0", "tdd-sbm-3"))) #"ppsbm"
+tdd_results_90 = data.frame(expand.grid(K = K_set, N = N_set[2], sim_method = c("tdd-sbm-0", "tdd-sbm-3"), 
+                                        fit_method = c("tdd-sbm-0", "tdd-sbm-3"))) #"ppsbm"
+
+tdd_results = apply(tdd_results_30[3,], 1, function(x) {
+  cat("running for parameters:", x,"\n")
+  K = as.numeric(x['K'])
+  roles = generate_roles(N = as.numeric(x['N']), role_types = K, type = "discrete", rel_freq = rep(1/K, K))
+  omega = omega_list[as.character(K)]
   dc_fctrs = generate_dc_factors(roles, dc_levels = c(1:5))
-  results30 = simulate_tdd(roles, omega = omega_2, dc_factors = dc_fctrs, sim_method = "tdd-sbm-3", fit_method = "tdd-sbm-0")
-  results33 = simulate_tdd(roles, omega = omega_2, dc_factors = dc_fctrs, sim_method = "tdd-sbm-3", fit_method = "tdd-sbm-3")
+  results = simulate_tdd(roles, omega, dc_fctrs, sim_method = x[['sim_method']], fit_method = x[['fit_method']],
+                          N_sim = 10, verbose = FALSE)
+   return(results)
+})
 
+# Add results to summary table
 
-# run tdd-sbm simulation ----
+tdd_results_30$`Degree correct (true)` = !grepl(tdd_results_30$fit_method, pattern = "-0")
+tdd_results_30$`Degree correct (fit)` = !grepl(tdd_results_30$sim_method, pattern = "-0")
 
-td_results = vector(mode = "list", length = length(K_set))
+tdd_results_mean = lapply(tdd_results, function(x) {sapply(x, mean)})
+tdd_results_sd = lapply(tdd_results, function(x) {sapply(x, sd)})
 
-td_results = 
-  lapply(1:length(K_set), function(i) {
-  K = K_set[i]
-  omega = omega_list[[i]]
-  for(N in N_set) {
-    for (dc in c(0,3)) { #no degree correction, undirected, time-independent degree correction
-      roles = generate_roles(30, roles = 2, type = "discrete", rel_freq = rep(1/K, K))
-      lapply(V, function(N) {
-        tdd_results_dc0 = simulate_tdd(N, n_roles, omega, Time, dc = 0, N_sim, kl = kl_per_network) 
-        tdd_results_dc3 = simulate_tdd(N, n_roles, omega, Time, dc = 3, N_sim, kl = kl_per_network) 
-      })
-    }
-  })
+tdd_results_30$ARI = paste0(round(sapply(tdd_results_mean, "[[", "tdd_sbm_ari"), 2), " (", round(sapply(tdd_results_sd, "[[", "tdd_sbm_ari"), 2), ")")
+tdd_results_30$MAPE = paste0(round(sapply(tdd_results_mean, "[[", "tdd_sbm_mape"), 2), " (", round(sapply(tdd_results_sd, "[[", "tdd_sbm_mape"), 2), ")")
+tdd_results_30$LLIK_true = paste0(round(sapply(tdd_results_mean, "[[", "tdd_sbm_sim"), 2), " (", round(sapply(tdd_results_sd, "[[", "tdd_sbm_sim"), 2), ")")
+tdd_results_30$LLIK_diff = paste0(round(sapply(tdd_results_mean, "[[", "tdd_sim_vs_fit_method"), 2), " (", round(sapply(tdd_results_sd, "[[", "tdd_sim_vs_fit_method"), 2), ")")
 
+tdd_results_30 = tdd_results_30[,!names(tdd_results_30) %in% c("sim_method","fit_method")]
 
 # ---------------------------------------------------------------------------------------------------------------
 # 2. ppsbm to show impact of degree correction ----
