@@ -18,7 +18,7 @@ library(ppsbm)
 library(fossil) #for adj rand index
 library(gtools) #for permutations
 
-# new functions (generate_multilayer_array) ----
+# generate_multilayer_array function ----
 
 #' generate N x N x Time array (Time-sliced adjacency matrices) based on TDD-SBM (type == "discrete) or TDMM-SBM (type = "mixed") model
 #' @param roles If type is `discrete`, a length-N vector of block assignments. If type is `mixed` G x N matrix of block-assignment weights.
@@ -91,7 +91,7 @@ N_sim = 10
 set.seed(1)
 kl_per_network = 10
 
-#   - omega ----
+#   - omegas ----
 
 a = 10
 b = 5 
@@ -225,7 +225,7 @@ simulate_tdd <- function(roles, omega,  dc_factors = NULL,
   N = length(roles)
   Time = dim(omega)[3]
   dc_sim = as.numeric(gsub(sim_method, pattern = "tdd-sbm-", replacement=""))
-  dc_fit = as.numeric(gsub(fit_method, pattern = "tdd-sbm-", replacement=""))
+  dc_fit = as.numeric(gsub(fit_method, pattern = "tdd-sbm-|ppsbm", replacement=""))
   block_omega = omega*array(table(roles) %*% t(table(roles)), dim = c(K, K, Time))
   
   # ---------------------------------------------------------------------------------------------------------------
@@ -288,10 +288,21 @@ simulate_tdd <- function(roles, omega,  dc_factors = NULL,
       # number of blocks to try -- for this study look between 1 and 4
       min_K = 1 # -- can index later by K (true) and selected_K as long as min_K is 1
       max_K = 4
-      ppsbm = mainVEM(list(Nijk=Nijk,Time=Time), N, Qmin = min_K, Qmax = max_K, directed=TRUE,
-                      method='hist', d_part=5, n_perturb=10, n_random=0)
-
-      selected_K = modelSelection_Q(list(Nijk=Nijk,Time=Time), N, Qmin = min_K, Qmax = max_K, directed = TRUE, sparse = FALSE, ppsbm)$Qbest
+      
+      # print each fit's progress?
+      if (verbose) {
+        ppsbm = mainVEM(list(Nijk=Nijk,Time=Time), N, Qmin = min_K, Qmax = max_K, directed=TRUE,
+                        method='hist', d_part=4, n_perturb=10, n_random=0)
+      } else {
+        log = capture.output({ppsbm = mainVEM(list(Nijk=Nijk,Time=Time), N, Qmin = min_K, Qmax = max_K, directed=TRUE,
+                                              method='hist', d_part=4, n_perturb=10, n_random=0)})
+      }
+      
+      if (verbose) {
+        selected_K = modelSelection_Q(list(Nijk=Nijk,Time=Time), N, Qmin = min_K, Qmax = max_K, directed = TRUE, sparse = FALSE, ppsbm)$Qbest
+      } else {
+        log = capture.output({selected_K = modelSelection_Q(list(Nijk=Nijk,Time=Time), N, Qmin = min_K, Qmax = max_K, directed = TRUE, sparse = FALSE, ppsbm)$Qbest})
+      }
       # selected K
       # ppsbm_roles = apply(ppsbm[[selected_K]]$tau, 2, which.max) #est roles
       # par(mfrow = c(selected_K, selected_K));  apply(exp(ppsbm[[selected_K]]$logintensities.ql), 1, plot, type = "l")
@@ -307,8 +318,8 @@ simulate_tdd <- function(roles, omega,  dc_factors = NULL,
 
       tdd_sbm_mape[s] = mean(abs(ppsbm_block_omega - block_omega)/(block_omega))
       # use selfEdges FALSE since ppsbm fits without them? (but then adjust tdd_sbm block omega?)
-      tdd_sbm_sim[s] = tdd_sbm_llik(discrete_edge_array, roles = roles - 1, omega = block_omega, degreeCorrect = dc_sim, directed = TRUE, selfEdges = TRUE)
-      tdd_sbm_fit[s] = tdd_sbm_llik(discrete_edge_array, roles = ppsbm_roles_K, omega = ppsbm_block_omega, degreeCorrect = 0, directed = TRUE, selfEdges = TRUE)
+      tdd_sbm_sim[s] = tdd_sbm_llik(discrete_edge_array, roles = roles - 1, omega = block_omega, degreeCorrect = dc_sim, directed = TRUE, selfEdges = TRUE) #roles should be 0-indexed
+      tdd_sbm_fit[s] = tdd_sbm_llik(discrete_edge_array, roles = ppsbm_roles_K - 1, omega = ppsbm_block_omega, degreeCorrect = 0, directed = TRUE, selfEdges = TRUE)
     }
   
   }
@@ -329,7 +340,7 @@ simulate_tdd <- function(roles, omega,  dc_factors = NULL,
   return(results)
 }
 
-  # example:
+#   - examples: ----
   # no degree hetereogeneity in data generation 
   # roles = generate_roles(30, role_types = 2, type = "discrete", rel_freq = c(.5,.5))
   # results00 = simulate_tdd(roles, omega = omega_2, sim_method = "tdd-sbm-0", fit_method = "tdd-sbm-0")
