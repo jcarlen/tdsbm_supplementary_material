@@ -330,7 +330,7 @@ simulate_tdd <- function(roles, omega,  dc_factors = NULL,
     tdd_sbm_ari = tdd_sbm_ari,
     # blcok-to-block activity detection
     tdd_sbm_mape = tdd_sbm_mape,
-    # compare likelihood of data under fit vs. true model
+    # compare likelihood of data under fit vs. true model used to simulate the data
     tdd_sbm_sim = tdd_sbm_sim,
     tdd_sbm_fit = tdd_sbm_fit,
     tdd_sim_vs_fit_method = tdd_sbm_fit - tdd_sbm_sim,
@@ -369,18 +369,20 @@ tdd_results = apply(tdd_results_30, 1, function(x) {
    return(results)
 })
 
+#saveRDS(tdd_results, "sim_study/tdd_results.RDS")
+
 # Add results to summary table
 
-tdd_results_30$`Degree correct (true)` = !grepl(tdd_results_30$fit_method, pattern = "-0|ppsbm")
-tdd_results_30$`Degree correct (fit)` = !grepl(tdd_results_30$sim_method, pattern = "-0|ppsbm")
+tdd_results_30$`Degree correct (sim)` = !grepl(tdd_results_30$sim_method, pattern = "-0|ppsbm")
+tdd_results_30$`Degree correct (fit)` = !grepl(tdd_results_30$fit_method, pattern = "-0|ppsbm")
 
 tdd_results_mean = lapply(tdd_results, function(x) {sapply(x, mean)})
 tdd_results_sd = lapply(tdd_results, function(x) {sapply(x, sd)})
 
 tdd_results_30$ARI = paste0(round(sapply(tdd_results_mean, "[[", "tdd_sbm_ari"), 2), " (", round(sapply(tdd_results_sd, "[[", "tdd_sbm_ari"), 2), ")")
 tdd_results_30$MAPE = paste0(round(sapply(tdd_results_mean, "[[", "tdd_sbm_mape"), 2), " (", round(sapply(tdd_results_sd, "[[", "tdd_sbm_mape"), 2), ")")
-tdd_results_30$LLIK_true = paste0(round(sapply(tdd_results_mean, "[[", "tdd_sbm_sim"), 2), " (", round(sapply(tdd_results_sd, "[[", "tdd_sbm_sim"), 2), ")")
-tdd_results_30$LLIK_diff = paste0(round(sapply(tdd_results_mean, "[[", "tdd_sim_vs_fit_method"), 2), " (", round(sapply(tdd_results_sd, "[[", "tdd_sim_vs_fit_method"), 2), ")")
+tdd_results_30$LLIK_sim = paste0(round(sapply(tdd_results_mean, "[[", "tdd_sbm_sim")), " (", round(sapply(tdd_results_sd, "[[", "tdd_sbm_sim"), 1), ")")
+tdd_results_30$LLIK_diff = paste0(round(sapply(tdd_results_mean, "[[", "tdd_sim_vs_fit_method")), " (", round(sapply(tdd_results_sd, "[[", "tdd_sim_vs_fit_method"), 1), ")")
 
 tdd_results_30 = tdd_results_30[,!names(tdd_results_30) %in% c("sim_method","fit_method")]
 
