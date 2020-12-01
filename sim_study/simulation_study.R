@@ -23,8 +23,8 @@ library(gtools) #for permutations
 #' generate N x N x Time array (Time-sliced adjacency matrices) based on TDD-SBM (type == "discrete) or TDMM-SBM (type = "mixed") model
 #' @param roles If type is `discrete`, a length-N vector of block assignments. If type is `mixed` G x N matrix of block-assignment weights.
 #' @param omega A K x K x Time array or Time-length list of K x K matrices. If the latter will be internally converted to array.
-#' If no degree-correction (`dc_factors is NULL`), omega represents mean block-to-block edge values. 
-#' With degree-correction (dc_factors differ from default) omega represent the sum of block-to-block edges.
+#' If `type` is `discrete`, omega represents mean block-to-block edge values over time. 
+#' If `type` is `mixed` omega represents total block-to-block activity over time.
 #' @param type `discrete` or `mixed` for tdd-sbm or tdmm-sbm, respectively. If mixed, dc_factors is ignored.
 #' @param dc_factors 
 # '   if not degree-corrected, should be NULL
@@ -41,28 +41,37 @@ generate_multilayer_array <- function(roles, omega, dc_factors = NULL, type = "d
   
   # checks
   if (length(unique(roles)) <= 1) stop("There should be at least two unique roles")
-  if (type == "discrete" & dc) {
-    if (! identical(aggregate(dc_factors ~ roles, FUN = "sum")[,2], rep(1, length(unique(roles))))) {
-      warning("degree correction factors not normalized to sum to 1 by block. will normalize now.")
-      #normalize?
-      role_sums = aggregate(dc_factors, by = list(roles), sum)
-      role_sums = setNames(role_sums$x, role_sums$Group.1)
-      dc_factors = dc_factors/role_sums[roles] #group sum constraint
-      cat("dc_factors normalized:", dc_factors, "\n")
-      # check all(aggregate(dc_factors, by = list(roles), sum)$x == 1)
+  
+  if (type == "discrete") {
+    roles = as.numeric(as.factor(roles)) #in this case want to align role and index #assumes order of omega rows/columns corresponds to role order 
+    if (dc) {
+      #normalize dc
+      if (! identical(aggregate(dc_factors ~ roles, FUN = "sum")[,2], rep(1, length(unique(roles))))) {
+        warnings("degree correction factors not normalized to sum to 1 by block. will normalize now.")
+        role_sums = aggregate(dc_factors, by = list(roles), sum)
+        role_sums = setNames(role_sums$x, role_sums$Group.1)
+        dc_factors = dc_factors/role_sums[roles] #group sum constraint
+        cat("dc_factors normalized:", dc_factors, "\n")
+        # check all(aggregate(dc_factors, by = list(roles), sum)$x == 1)
+      }
     }
+  }
+  
+  if (type == "mixed" && !identical(colSums(roles), rep(1, ncol(roles)))) { # normalize mixed
+    if (min(colSums(roles))<=0) {warnings("At least one roles non-positive weight.")}
+    roles = sweep(roles, 2, colSums(roles), FUN="/")
   }
   
   #  infer N, K, Time,
   N = ifelse(is.null(dim(roles)), length(roles), nrow(roles))
   K = ifelse("list" %in% class(omega), nrow(omega[[1]]), dim(omega)[1]) # number of blocks
   Time = ifelse("list" %in% class(omega), length(omega[[1]]), dim(omega)[3])
-  if(!"array" %in% class(omega)) {omega  = array(unlist(omega), dim = c(K,K,Time))} #make array if not already
+  if (!"array" %in% class(omega)) {omega  = array(unlist(omega), dim = c(K,K,Time))} #make array if not already
   
   # adjusted omega (to account for normalization in degree correction) 
   # entries are expected total weight from r to s instead of expected edge weight from single edge from block r to block s
-  if(dc) {block_omega = omega*array(table(roles) %*% t(table(roles)), dim = c(K, K, Time))}
-  
+  if (dc) {block_omega = omega*array(table(roles) %*% t(table(roles)), dim = c(K, K, Time))}
+
   edge_array = array(0, dim = c(N, N, Time))
   for (i in 1:N) {
     role_i = roles[i]
@@ -71,7 +80,7 @@ generate_multilayer_array <- function(roles, omega, dc_factors = NULL, type = "d
       for (Time in 1:Time) {
           if (type == "discrete" & !dc) { ijt = rpois(omega[role_i, role_j, Time], n= 1) }
           if (type == "discrete" & dc) { ijt = rpois(dc_factors[i]*dc_factors[j]*block_omega[role_i, role_j, Time], n= 1) }
-          if (type == "mixed") { ijt = rpois(t(roles[, i])%*% omega[, , Time] %*% roles[, j], n= 1) }
+          if (type == "mixed") { ijt = rpois(t(roles[i, ])%*% omega[, , Time] %*% roles[j, ], n= 1) }
           edge_array[i, j, Time] = ijt
       } 
     }
@@ -162,18 +171,24 @@ omega_list = list(`2` = omega_2, `3` = omega_3)
 # (custom roles can also be fed to the simulation)
 # role_types: (discrete case) is an integer, indicating the possible blocks (roles) a user can have
 #        (mixed case) a matrix where each row is a C_i vector of block weights, indicating realized mixtures of blocks. (A small set for the purposes of simulation. Could also sample from a distribution with k-vector range)
-# rel_freq: dictates relative frequency of the blocks (discrete case) or block-weight vectors (mixed cased), defaulting to as close as possible to equal groups
+# rel_freq: dictates relative frequency of the blocks (discrete case) or block-weight vectors (mixed cased), defaulting to as close as possible to equal groups. Will be normalized (to sum 1) if not already.
 
-generate_roles <- function(N, role_types, type = c("discrete", "mixed")[1],
-                           rel_freq = ifelse(type == "discrete", list(rep(1, roles)), list(rep(1, nrow(roles))))[[1]]) {
+generate_roles <- function(N, role_types, type = c("discrete", "mixed")[1], rel_freq = 1) {
+  
   if (!type %in% c("discrete", "mixed")) {stop("type must be discrete or mixed")}
+  
+  # if rel_freq == 1 (default for equal frequency) set the right rel_freq vector depending on "type"
+  if(identical(rel_freq, 1)) {
+    if (type=="discrete") {rel_freq = rep(1, role_types)}
+    if (type=="mixed") {rel_freq = rep(1, nrow(role_types))}
+  }
   rel_freq = rel_freq/sum(rel_freq)
   if (type == "discrete") {
     roles = rep(1:role_types, times = ceiling(N*rel_freq))[1:N] #only up to first N elements in case of rounding
   } else { #type mixed
     times = ceiling(rel_freq*N)
     roles = role_types[rep(1:length(times),times),][1:N,] #only up to first N elements in case of rounding
-    roles = roles/colSums(roles)
+    roles = sweep(roles, 2, colSums(roles), FUN="/")
   }
   return(roles)
 }
@@ -182,8 +197,8 @@ generate_roles <- function(N, role_types, type = c("discrete", "mixed")[1],
     # generate_roles(30, role_types = 2, type = "discrete", rel_freq = c(.5,.5))
     # generate_roles(30, role_types = 3, type = "discrete", rel_freq = c(1,2,3))
     # mixed_role_options = matrix(c(0,.25,.75)[permutations(3, 3)],factorial(3),3)
-    # generate_roles(30, role_types = mixed_role_options, type = "mixed", rel_freq = rep(1,6))
-    # generate_roles(30, role_types = mixed_role_options, type = "mixed", rel_freq = 1:6)
+    # generate_roles(30, role_types = mixed_role_options, type = "mixed", rel_freq = rep(1,nrow(mixed_role_options)))
+    # generate_roles(30, role_types = mixed_role_options, type = "mixed", rel_freq = 1:nrow(mixed_role_options))
 
 # roles are the discrete roles of the nodes (which also tells us N)
 # dc_levels is preset relative activity level we use for degree correction. They will be cycled through within each role.
@@ -250,7 +265,6 @@ simulate_tdd <- function(roles, omega,  dc_factors = NULL,
   
     # fit simulated networks
     if (grepl(fit_method, pattern = "tdd-sbm")) {
-      
       
       # print each fit's progress?
       if (verbose) {
@@ -361,20 +375,23 @@ tdd_results_90 = data.frame(expand.grid(K = K_set, N = N_set[2], sim_method = c(
 tdd_results = apply(tdd_results_30, 1, function(x) {
   cat("running for parameters:", x,"\n")
   K = as.numeric(x['K'])
-  roles = generate_roles(N = as.numeric(x['N']), role_types = K, type = "discrete", rel_freq = rep(1/K, K))
+  roles = generate_roles(N = as.numeric(x['N']), role_types = K, type = "discrete", rel_freq = rep(1, K)) #<- note: can alter relative role frequency by changing this specification. E.g. 1:K would give increasing frequency to higher-numbered roles.
   omega = omega_list[as.character(K)][[1]]
-  dc_fctrs = generate_dc_factors(roles, dc_levels = c(1:5))
+  dc_fctrs = generate_dc_factors(roles, dc_levels = c(1:5)) #<- note: can alter degree correction levels by changing this specification. E.g. 1:2 would give only two levels of degree heterogeneity
   results = simulate_tdd(roles, omega, dc_fctrs, sim_method = x[['sim_method']], fit_method = x[['fit_method']],
                           N_sim = 10, verbose = FALSE)
    return(results)
 })
 
 #saveRDS(tdd_results, "sim_study/tdd_results.RDS")
+tdd_results = readRDS("sim_study/tdd_results.RDS")
 
 # Add results to summary table
 
-tdd_results_30$`Degree correct (sim)` = !grepl(tdd_results_30$sim_method, pattern = "-0|ppsbm")
-tdd_results_30$`Degree correct (fit)` = !grepl(tdd_results_30$fit_method, pattern = "-0|ppsbm")
+tdd_results_30$sim_method = gsub(tdd_results_30$sim_method, pattern = "-0", replacement = "")
+tdd_results_30$sim_method = gsub(tdd_results_30$sim_method, pattern = "-3", replacement = " DC")
+tdd_results_30$fit_method = gsub(tdd_results_30$fit_method, pattern = "-0", replacement = "")
+tdd_results_30$fit_method = gsub(tdd_results_30$fit_method, pattern = "-3", replacement = " DC")
 
 tdd_results_mean = lapply(tdd_results, function(x) {sapply(x, mean)})
 tdd_results_sd = lapply(tdd_results, function(x) {sapply(x, sd)})
@@ -383,62 +400,53 @@ tdd_results_30$ARI = paste0(round(sapply(tdd_results_mean, "[[", "tdd_sbm_ari"),
 tdd_results_30$MAPE = paste0(round(sapply(tdd_results_mean, "[[", "tdd_sbm_mape"), 2), " (", round(sapply(tdd_results_sd, "[[", "tdd_sbm_mape"), 2), ")")
 tdd_results_30$LLIK_sim = paste0(round(sapply(tdd_results_mean, "[[", "tdd_sbm_sim")), " (", round(sapply(tdd_results_sd, "[[", "tdd_sbm_sim"), 1), ")")
 tdd_results_30$LLIK_diff = paste0(round(sapply(tdd_results_mean, "[[", "tdd_sim_vs_fit_method")), " (", round(sapply(tdd_results_sd, "[[", "tdd_sim_vs_fit_method"), 1), ")")
+tdd_results_30$`Est k (ppsbm)` = paste0(round(sapply(tdd_results_mean, "[[", "tdd_sbm_est_K")))
 
 tdd_results_30 = tdd_results_30[,!names(tdd_results_30) %in% c("sim_method","fit_method")]
 
+
 # ppsbm, no degree correction case. their model works as expected ----
+# Wants a seperate class for each degree-correcton level (but note the LLIK_sim and LLIK_diff results use the true K)
+# Bike example (seperate script) shows how degree correction ib model -> group stations with similar behavior across activity levels
 
-
-# ---------------------------------------------------------------------------------------------------------------
-
-# role detection
-
-# Wants a seperate class for each degree-correcton level
-apply(dc_discrete_ppsbm[[selected_Q]]$tau, 2, which.max)
-adj.rand.index(apply(dc_discrete_ppsbm[[selected_Q]]$tau, 2, which.max), roles)
-
-# omegas
-# par(mfrow = c(selected_Q, selected_Q)); par(mai = rep(.5, 4))
-# apply(exp(ppsbm[[selected_Q]]$logintensities.ql), 1, plot, type = "l", col = "blue")
-
-# with true number of groups? gets it right
-apply(dc_discrete_ppsbm[[n_roles]]$tau, 2, which.max)
-adj.rand.index(apply(dc_discrete_ppsbm[[n_roles]]$tau, 2, which.max), roles)
-
-par(mfrow = c(n_roles, n_roles)); par(mai = rep(.5, 4))
-apply(exp(dc_discrete_ppsbm[[n_roles]]$logintensities.ql), 1, plot, type = "l", col = "blue")
-
-# Bike example shows how degree correction ib model -> group statins with similar behavior across activity levels
 # ---------------------------------------------------------------------------------------------------------------
 # 3. mixed-membership to show impact of potential model mis-specification ----
 
-n_roles = K_set[1]
-N = V[1]
+mixed_role_options_list = list(mixed_role_options_2, mixed_role_options_3)
+mixed_role_options_2 = matrix(c(.25,.75)[permutations(2, 2)],factorial(2),2)
+mixed_role_options_3 = matrix(c(0,.25,.75)[permutations(3, 3)],factorial(3),3)
 
-roles_mixed = matrix(c(rep(.5, 2*N/3), rep(c(0,1), N/3), rep(c(1,0), N/3)), nrow = n_roles, ncol = N); roles_mixed
+i = 1
+K = K_set[i]
+N = N_set[i]
+omega = omega_list[[i]]
+block_omega = omega*N^2/K^2 #these weights should align it with degree corrected example in this case (equally frequent roles)
 
-#apply sum to 1 constraint to mixed roles
-roles_mixed = roles_mixed/rowSums(roles_mixed)
+mixed_role_options = mixed_role_options_list[[i]]
 
-tdmm_sbm_role_sum_abs_error = 1:N_sim #use sum because values are normalized
-tdmm_sbm_omega_mean_abs_error = 1:N_sim
-tdmm_sbm_ll =1:N_sim
-tdd_sbm_ll =1:N_sim
+tdmm_sbm_role_err = 1:N_sim #sum of abs error averaged over number of blocks (since columns are sum-1 normalized)
+#tdmm_sbm_omega_mean_abs_error = 1:N_sim
+#tdmm_sbm_ari = 1:N_sim #divide by number of roles?
+tdmm_sbm_mape = 1:N_sim
+tmm_sbm_sim =1:N_sim
+tmm_sbm_fit =1:N_sim
 
-# assume starting from tdsbm_supplementary_material directory
-setwd("mixed_model_implementation_python")
+setwd("mixed_model_implementation_python") # assume starting from tdsbm_supplementary_material directory
 
 for (s in 1:N_sim) {
   
+  roles_mixed = generate_roles(N, role_types = mixed_role_options, type = "mixed", rel_freq = rep(1,nrow(mixed_role_options))) #can also try 1:nrow(mixed_role_options)
   mixed_edge_array = generate_multilayer_array(roles_mixed, block_omega, type = "mixed")
   write.csv(mixed_edge_array, "../data/sim/mixed_edge_array.csv", row.names = FALSE)
   # run mixed
   system("python3 tdmm_sbm_sim_study.py")
   tdmm_sbm_roles_2 = read.csv("../mixed_model_results/SIM_2_roles.csv")
-  tdmm_sbm_role_sum_abs_error[s] = min(sum(abs(roles_mixed - t(tdmm_sbm_roles_2))), sum(abs(roles_mixed - t(tdmm_sbm_roles_2)[2:1,]))) #try both orders
+  
+  tdmm_sbm_role_err[s] = min(sum(abs(roles_mixed - tdmm_sbm_roles_2)), sum(abs(roles_mixed - tdmm_sbm_roles_2[2:1,])))/K #try both orders
   tdmm_sbm_omega_2 = read.csv("../mixed_model_results/SIM_2_omega.csv")
-  tdmm_sbm_omega_mean_abs_error[s] = min(mean(abs(unlist(tdmm_sbm_omega_2 - apply(block_omega, 3, as.vector)))), 
-                                      mean(abs(unlist(tdmm_sbm_omega_2 - apply(block_omega, 3, function(x) {as.vector(t(x))})))))
+  tdmm_sbm_mape[s] = min(mean(unlist(abs(tdmm_sbm_omega_2 - apply(block_omega, 3, as.vector))/block_omega)),
+                         mean(unlist(abs(tdmm_sbm_omega_2 - apply(block_omega, 3, function(x) {as.vector(t(x))}))/
+                                       apply(block_omega, 3, function(x) {as.vector(t(x))}))))
   
   # try fitting discrete models to data generated from mixed membership
   mixed_edge_edglist = adj_to_edgelist(mixed_edge_array, directed = TRUE, selfEdges = TRUE, removeZeros = TRUE)
@@ -448,7 +456,7 @@ for (s in 1:N_sim) {
   
   # evaluate liklihood of mixed edge array using params found by discrete model
   tdd_roles = matrix(0, N, n_roles); for (i in 1:N) {tdd_roles[i, tdd_sbm$FoundComms[i]+1] = 1}; rownames(tdd_roles) = 1:N
-  tdd_roles = t(t(tdd_roles)/colSums(tdd_roles))
+  tdd_roles = sweep(tdd_roles, 2, colSums(tdd_roles), FUN="/")
   tdd_omega = sapply(tdd_sbm$EdgeMatrix, as.vector)
   # discrete
   tdd_sbm_ll[s] = tdmm_sbm_llik(mixed_edge_array, C = tdd_roles, omega = tdd_omega, selfEdges = TRUE, directed = TRUE)
