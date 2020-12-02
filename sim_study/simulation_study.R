@@ -112,7 +112,7 @@ par(mfrow = c(2, 2))
 curve(b*sin(x*pi/Time) + b, 0, Time, ylim = c(0, ymax))
 curve(a*sin(x*2*pi/Time)+a, 0, Time, ylim = c(0, ymax))
 curve(-a*sin(x*2*pi/Time)+a, 0, Time, ylim = c(0, ymax))
-curve(b*sin(x*pi/Time)+ b, 0, Time, ylim = c(0, ymax))
+curve(b*sin(x*pi/Time)^3+ b, 0, Time, ylim = c(0, ymax))
 
 # show three-block curves
 T = Time #set just for labeling, then remove
@@ -123,7 +123,7 @@ curve(b*sin(x*pi/T) + b, 0, T, ylim = c(0, ymax), main = ("1 to 1"), xlab = "")
 curve(a*sin(x*2*pi/T)+a, 0, T, ylim = c(0, ymax), main = ("1 to 2"), xlab = "")
 curve(a*sin(x*2*pi/T-1)/2+a, 0, T, ylim = c(0, ymax), main = ("1 to 3"), xlab = "")
 curve(-a*sin(x*2*pi/T)+a, 0, T, ylim = c(0, ymax), main = ("2 to 1"), xlab = "")
-curve(b*sin(x*pi/T)+ b, 0, T, ylim = c(0, ymax), main = ("2 to 2"), xlab = "")
+curve(b*sin(x*pi/T)^3+ b, 0, T, ylim = c(0, ymax), main = ("2 to 2"), xlab = "")
 curve(a*sin(x*2*pi/T-2)/4+a, 0, T, ylim = c(0, ymax), main = ("2 to 3"), xlab = "")
 curve(-a*sin(x*2*pi/T-1)/2+a, 0, T, ylim = c(0, ymax), main = ("3 to 1"), xlab = "")
 curve(-a*sin(x*2*pi/T-2)/4+a, 0, T, ylim = c(0, ymax), main = ("3 to 2"), xlab = "")
@@ -131,21 +131,22 @@ curve(0*x+b, 0, T, ylim = c(0, ymax), main = ("3 to 3"), xlab = "")
 dev.off()
 rm(T)
 
-# show overlapping
-# par(mfrow = c(1,1))
-# curve(a*sin(x*2*pi/Time)+a, 0, Time, ylim = c(0, ymax))
-# curve(-a*sin(x*2*pi/Time)+a, 0, Time, add = TRUE, lty = 2)
-# curve(a*sin(x*2*pi/Time-1)/2+a, 0, Time, col = "blue", add = TRUE)
-# curve(-a*sin(x*2*pi/Time-1)/2+a, 0, Time, col = "blue", add = TRUE, lty = 2)
-# curve(a*sin(x*2*pi/Time-2)/4+a, 0, Time, col = "green", add = TRUE)
-# curve(-a*sin(x*2*pi/Time-2)/4+a, 0, Time, col = "green", add = TRUE, lty = 2)
-# curve(b*sin(x*pi/Time) + b, 0, Time, col = "red", add = TRUE)
-# curve(0*x+b, 0, Time, col = "red", add = TRUE)
+#show overlapping
+par(mfrow = c(1,1))
+curve(a*sin(x*2*pi/Time)+a, 0, Time, ylim = c(0, ymax))
+curve(-a*sin(x*2*pi/Time)+a, 0, Time, add = TRUE, lty = 2)
+curve(a*sin(x*2*pi/Time-1)/2+a, 0, Time, col = "blue", add = TRUE)
+curve(-a*sin(x*2*pi/Time-1)/2+a, 0, Time, col = "blue", add = TRUE, lty = 2)
+curve(a*sin(x*2*pi/Time-2)/4+a, 0, Time, col = "green", add = TRUE)
+curve(-a*sin(x*2*pi/Time-2)/4+a, 0, Time, col = "green", add = TRUE, lty = 2)
+curve(b*sin(x*pi/Time) + b, 0, Time, col = "red", add = TRUE)
+curve(b*sin(x*pi/Time)^3+ b, 0, Time, col = "red", add = TRUE, lty = 2)
+curve(0*x+b, 0, Time, col = "red", add = TRUE, lty = 3)
 
 omega_11 = b*sin(x*pi/Time) + b
 omega_12 =  a*sin(x*2*pi/Time)+a
 omega_21 = -a*sin(x*2*pi/Time)+a
-omega_22 = omega_11
+omega_22 = b*sin(x*pi/Time)^3+ b
 omega_13 =  a*sin(x*2*pi/Time-1)/2+a
 omega_31 = -a*sin(x*2*pi/Time-1)/2+a
 omega_23 =  a*sin(x*2*pi/Time-2)/4+a
@@ -413,12 +414,12 @@ tdd_results_30 = tdd_results_30[,!names(tdd_results_30) %in% c("sim_method","fit
 # 3. mixed-membership to show impact of potential model mis-specification ----
 
 mixed_role_options_list = list(mixed_role_options_2, mixed_role_options_3)
-mixed_role_options_2 = matrix(c(.25,.75)[permutations(2, 2)],factorial(2),2)
+mixed_role_options_2 = matrix(c(.1,.9)[permutations(2, 2)],factorial(2),2)
 mixed_role_options_3 = matrix(c(0,.25,.75)[permutations(3, 3)],factorial(3),3)
 
-i = 1
+N = N_set[1]
+i = 2
 K = K_set[i]
-N = N_set[i]
 omega = omega_list[[i]]
 block_omega = omega*N^2/K^2 #these weights should align it with degree corrected example in this case (equally frequent roles)
 
@@ -437,16 +438,23 @@ for (s in 1:N_sim) {
   
   roles_mixed = generate_roles(N, role_types = mixed_role_options, type = "mixed", rel_freq = rep(1,nrow(mixed_role_options))) #can also try 1:nrow(mixed_role_options)
   mixed_edge_array = generate_multilayer_array(roles_mixed, block_omega, type = "mixed")
-  write.csv(mixed_edge_array, "../data/sim/mixed_edge_array.csv", row.names = FALSE)
+  write.csv(mixed_edge_array, paste0("../data/sim/mixed_edge_array.csv"), row.names = FALSE)
+  params = data.frame(K = K)
+  write.csv(params, paste0("../data/sim/mixed_params.csv"), row.names = FALSE)
   # run mixed
   system("python3 tdmm_sbm_sim_study.py")
-  tdmm_sbm_roles_2 = read.csv("../mixed_model_results/SIM_2_roles.csv")
+  tdmm_sbm_roles = read.csv("../sim_study/SIM_roles.csv")
   
-  tdmm_sbm_role_err[s] = min(sum(abs(roles_mixed - tdmm_sbm_roles_2)), sum(abs(roles_mixed - tdmm_sbm_roles_2[2:1,])))/K #try both orders
-  tdmm_sbm_omega_2 = read.csv("../mixed_model_results/SIM_2_omega.csv")
-  tdmm_sbm_mape[s] = min(mean(unlist(abs(tdmm_sbm_omega_2 - apply(block_omega, 3, as.vector))/block_omega)),
-                         mean(unlist(abs(tdmm_sbm_omega_2 - apply(block_omega, 3, function(x) {as.vector(t(x))}))/
+  tdmm_sbm_role_err[s] = min(apply(permutations(K, K), 1, function(x) { sum(abs(roles_mixed - tdmm_sbm_roles[,x])) })/K) #try all orders
+  tdmm_block_order = permutations(K, K)[which.min(apply(permutations(K, K), 1, function(x) { sum(abs(roles_mixed - tdmm_sbm_roles[,x])) })),]
+  tdmm_sbm_omega = read.csv("../sim_study/SIM_omega.csv")
+  tdmm_sbm_mape[s] = min(mean(unlist(abs(tdmm_sbm_omega - apply(block_omega, 3, as.vector))/block_omega)),
+                         mean(unlist(abs(tdmm_sbm_omega - apply(block_omega, 3, function(x) {as.vector(t(x))}))/
                                        apply(block_omega, 3, function(x) {as.vector(t(x))}))))
+  par(mfrow = c(K,K)); for (i in 1:K^2) {
+   plot(as.numeric(tdmm_sbm_omega[i,]), type = "l", ylim = c(0,5000))
+   points(apply(block_omega, 3, dplyr::nth, i), col = "red", type = "l")
+  }
   
   # try fitting discrete models to data generated from mixed membership
   mixed_edge_edglist = adj_to_edgelist(mixed_edge_array, directed = TRUE, selfEdges = TRUE, removeZeros = TRUE)
@@ -458,10 +466,12 @@ for (s in 1:N_sim) {
   tdd_roles = matrix(0, N, n_roles); for (i in 1:N) {tdd_roles[i, tdd_sbm$FoundComms[i]+1] = 1}; rownames(tdd_roles) = 1:N
   tdd_roles = sweep(tdd_roles, 2, colSums(tdd_roles), FUN="/")
   tdd_omega = sapply(tdd_sbm$EdgeMatrix, as.vector)
+  # vs self  (mixed)
+  tdmm_sbm_sim[s] = tdmm_sbm_llik(mixed_edge_array, C = roles_mixed, omega = block_omega, selfEdges = TRUE, directed = TRUE)
   # discrete
   tdd_sbm_ll[s] = tdmm_sbm_llik(mixed_edge_array, C = tdd_roles, omega = tdd_omega, selfEdges = TRUE, directed = TRUE)
   # vs mixed
-  tdmm_sbm_ll[s] = tdmm_sbm_llik(mixed_edge_array, C = tdmm_sbm_roles_2, omega = tdmm_sbm_omega_2, selfEdges = TRUE, directed = TRUE)
+  tdmm_sbm_fit[s] = tdmm_sbm_llik(mixed_edge_array, C = tdmm_sbm_roles, omega = tdmm_sbm_omega, selfEdges = TRUE, directed = TRUE)
   
 }
 
@@ -469,4 +479,5 @@ tdmm_vs_tdd_sbm_ll = tdmm_sbm_ll - tdd_sbm_ll #(scale by difference in parameter
 
 setwd("..")
 
+#potential for identifiability issues when omega 1->1 and 2->2 curves were identical
 

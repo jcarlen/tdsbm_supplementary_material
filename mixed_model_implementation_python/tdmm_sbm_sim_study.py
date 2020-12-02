@@ -46,13 +46,17 @@ mu_likelihood = mixmem_aux.mu_likelihood
 # Simulated data models
 ##############################################################################################################
 # Load data in array (matrix) format
+
+SIM_params = pd.read_csv("../data/sim/mixed_params.csv")
+K = SIM_params.K[0]
+
 SIM_matrix = pd.read_csv("../data/sim/mixed_edge_array.csv").to_numpy()
 N = SIM_matrix.shape[0]
 T = int(SIM_matrix.shape[1]/N)
 SIM_matrix = SIM_matrix.reshape(N, N, T, order = 'F')
 
 num_runs=5 #number of times we re-run the algorithm.
-numblocklist = np.array(range(2,3)) #number of blocks to try
+numblocklist = np.array(range(K,K+1)) #number of blocks to try
 
 # SIM TDMM-SBM for # Blocks in numblocklist
 SIM_ll=-np.inf*np.ones((num_runs,np.size(numblocklist,0)))
@@ -71,11 +75,12 @@ for n_run in range(0,num_runs):
         SIM_fit_sample.append((SIMr_fit,SIMc_fit))
         SIM_ll[n_run,blocks_i]=likelihood(SIMc_fit,SIMr_fit,SIM_matrix)  
     SIM_fit.append(SIM_fit_sample)
+    
 SIM_maxind=np.argmax(SIM_ll,0)
 SIM_llmax=np.max(SIM_ll,0)
 
 #Save
 for blocks_i in range(0,np.size(numblocklist,0)):
     numblocks=numblocklist[blocks_i]
-    pd.DataFrame(SIM_fit[SIM_maxind[blocks_i]][blocks_i][0].reshape([numblocks**2, T], order = 'F')).to_csv("../mixed_model_results/SIM_"+str(numblocks)+"_omega.csv", index=False)
-    pd.DataFrame(SIM_fit[SIM_maxind[blocks_i]][blocks_i][1]).to_csv("../mixed_model_results/SIM_"+str(numblocks)+"_roles.csv", index=False)
+    pd.DataFrame(SIM_fit[SIM_maxind[blocks_i]][blocks_i][0].reshape([numblocks**2, T], order = 'F')).to_csv("../sim_study/SIM_omega.csv", index=False)
+    pd.DataFrame(SIM_fit[SIM_maxind[blocks_i]][blocks_i][1]).to_csv("../sim_study/SIM_roles.csv", index=False)
