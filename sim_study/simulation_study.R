@@ -80,7 +80,7 @@ generate_multilayer_array <- function(roles, omega, dc_factors = NULL, type = "d
       for (Time in 1:Time) {
           if (type == "discrete" & !dc) { ijt = rpois(omega[role_i, role_j, Time], n= 1) }
           if (type == "discrete" & dc) { ijt = rpois(dc_factors[i]*dc_factors[j]*block_omega[role_i, role_j, Time], n= 1) }
-          if (type == "mixed") { ijt = rpois(t(roles[i, ])%*% omega[, , Time] %*% roles[j, ], n= 1) }
+          if (type == "mixed") { ijt = rpois(t(roles[i, ]) %*% omega[, , Time] %*% roles[j, ], n= 1) }
           edge_array[i, j, Time] = ijt
       } 
     }
@@ -413,31 +413,37 @@ tdd_results_30 = tdd_results_30[,!names(tdd_results_30) %in% c("sim_method","fit
 # ---------------------------------------------------------------------------------------------------------------
 # 3. mixed-membership to show impact of potential model mis-specification ----
 
-mixed_role_options_list = list(mixed_role_options_2, mixed_role_options_3)
-mixed_role_options_2 = matrix(c(.1,.9)[permutations(2, 2)],factorial(2),2)
+mixed_role_options_2 = matrix(c(.25,.75)[permutations(2, 2)],factorial(2),2)
 mixed_role_options_3 = matrix(c(0,.25,.75)[permutations(3, 3)],factorial(3),3)
+#mixed_role_options_2 = matrix(rep(1:5, 2), ncol = 2) #identifiability issues if all evenly split
+#mixed_role_options_3 = matrix(rep(1:5, 3), ncol = 3) 
+mixed_role_options_list = list(mixed_role_options_2, mixed_role_options_3)
 
-N = N_set[1]
-i = 2
+
+i = 1
+N = N_set[i]
 K = K_set[i]
 omega = omega_list[[i]]
 block_omega = omega*N^2/K^2 #these weights should align it with degree corrected example in this case (equally frequent roles)
-
 mixed_role_options = mixed_role_options_list[[i]]
 
 tdmm_sbm_role_err = 1:N_sim #sum of abs error averaged over number of blocks (since columns are sum-1 normalized)
 #tdmm_sbm_omega_mean_abs_error = 1:N_sim
 #tdmm_sbm_ari = 1:N_sim #divide by number of roles?
 tdmm_sbm_mape = 1:N_sim
-tmm_sbm_sim =1:N_sim
-tmm_sbm_fit =1:N_sim
+tdmm_sbm_sim =1:N_sim
+tdmm_sbm_fit =1:N_sim
+tdmm_discrete_fit =1:N_sim
 
 setwd("mixed_model_implementation_python") # assume starting from tdsbm_supplementary_material directory
 
 for (s in 1:N_sim) {
   
+  #roles_mixed = matrix(sample(1:(N*K), replace = TRUE), ncol = K); roles_mixed = sweep(roles_mixed, 2, colSums(roles_mixed), FUN="/")
+  #image(roles_mixed %*% block_omega[, , 1] %*% t(roles_mixed))
   roles_mixed = generate_roles(N, role_types = mixed_role_options, type = "mixed", rel_freq = rep(1,nrow(mixed_role_options))) #can also try 1:nrow(mixed_role_options)
   mixed_edge_array = generate_multilayer_array(roles_mixed, block_omega, type = "mixed")
+  #without randomness: mixed_edge_array = array(unlist(lapply(1:Time, function(i) {roles_mixed %*% block_omega[,,i] %*% t(roles_mixed)})), dim = c(N, N, Time))
   write.csv(mixed_edge_array, paste0("../data/sim/mixed_edge_array.csv"), row.names = FALSE)
   params = data.frame(K = K)
   write.csv(params, paste0("../data/sim/mixed_params.csv"), row.names = FALSE)
@@ -445,34 +451,46 @@ for (s in 1:N_sim) {
   system("python3 tdmm_sbm_sim_study.py")
   tdmm_sbm_roles = read.csv("../sim_study/SIM_roles.csv")
   
-  tdmm_sbm_role_err[s] = min(apply(permutations(K, K), 1, function(x) { sum(abs(roles_mixed - tdmm_sbm_roles[,x])) })/K) #try all orders
-  tdmm_block_order = permutations(K, K)[which.min(apply(permutations(K, K), 1, function(x) { sum(abs(roles_mixed - tdmm_sbm_roles[,x])) })),]
+  block_order = permutations(K, K)[which.min(apply(permutations(K, K), 1, function(x) { sum(abs(roles_mixed[,x] - tdmm_sbm_roles)) })),]
+  
+  tdmm_sbm_role_err[s] = sum(abs(roles_mixed[,block_order] - tdmm_sbm_roles))/K #try all orders
+  block_omega_ordered = array(sapply(1:Time, function(i) {block_omega[block_order,block_order,i]}), dim = c(K, K, Time))
   tdmm_sbm_omega = read.csv("../sim_study/SIM_omega.csv")
-  tdmm_sbm_mape[s] = min(mean(unlist(abs(tdmm_sbm_omega - apply(block_omega, 3, as.vector))/block_omega)),
-                         mean(unlist(abs(tdmm_sbm_omega - apply(block_omega, 3, function(x) {as.vector(t(x))}))/
-                                       apply(block_omega, 3, function(x) {as.vector(t(x))}))))
-  par(mfrow = c(K,K)); for (i in 1:K^2) {
-   plot(as.numeric(tdmm_sbm_omega[i,]), type = "l", ylim = c(0,5000))
-   points(apply(block_omega, 3, dplyr::nth, i), col = "red", type = "l")
+  tdmm_sbm_omega_array = array(unlist(tdmm_sbm_omega), dim = c(K,K,Time))
+  tdmm_sbm_mape[s] = mean(abs(tdmm_sbm_omega_array - block_omega_ordered)/block_omega_ordered)
+
+  #compare data matrix reconstruction
+  # mean(mixed_edge_array[,,16] - as.matrix(tdmm_sbm_roles) %*% tdmm_sbm_omega_array[,,16] %*% t(as.matrix(tdmm_sbm_roles)))
+  # mean(mixed_edge_array[,,16] - as.matrix(roles_mixed) %*% block_omega[,,16] %*% as.matrix(t(roles_mixed)))
+  
+  if (verbose) {
+    par(mfrow = c(K+1,K)); par(mai = rep(.6,4))
+    # mixed role comparison
+    plot(roles_mixed[,block_order], xlim = c(0,max(cbind(roles_mixed, tdmm_sbm_roles))), ylim = c(0,max(cbind(roles_mixed, tdmm_sbm_roles))))
+    points(tdmm_sbm_roles, col = "red") 
+    # overall activity pattern comparison
+    plot(colSums(apply(block_omega, 3, unlist)), type = "l"); points(colSums(tdmm_sbm_omega), col = "red", type = "l")
+    for (i in 1:K^2) { #omega comparison
+      plot(as.numeric(tdmm_sbm_omega[i,]), type = "l", ylim = c(0,max(c(max(tdmm_sbm_omega), max(block_omega_ordered)))))
+      points(apply(block_omega_ordered, 3, dplyr::nth, i), col = "red", type = "l")
+    }
   }
+  
+  # vs self  (mixed)
+  tdmm_sbm_sim[s] = tdmm_sbm_llik(A = mixed_edge_array, C = roles_mixed, omega = block_omega, selfEdges = TRUE, directed = TRUE)
+  # vs fit
+  tdmm_sbm_fit[s] = tdmm_sbm_llik(A = mixed_edge_array, C = tdmm_sbm_roles, omega = tdmm_sbm_omega, selfEdges = TRUE, directed = TRUE)
   
   # try fitting discrete models to data generated from mixed membership
   mixed_edge_edglist = adj_to_edgelist(mixed_edge_array, directed = TRUE, selfEdges = TRUE, removeZeros = TRUE)
-  tdd_sbm = sbmt(mixed_edge_edglist, maxComms = n_roles, degreeCorrect = 3, directed = TRUE, klPerNetwork = kl_per_network)
-  #plot(tdd_sbm)
-  # summarize error by finding likelihood of mixed-generated data fit with  discrete model vs. with mixed params.
-  
-  # evaluate liklihood of mixed edge array using params found by discrete model
-  tdd_roles = matrix(0, N, n_roles); for (i in 1:N) {tdd_roles[i, tdd_sbm$FoundComms[i]+1] = 1}; rownames(tdd_roles) = 1:N
-  tdd_roles = sweep(tdd_roles, 2, colSums(tdd_roles), FUN="/")
-  tdd_omega = sapply(tdd_sbm$EdgeMatrix, as.vector)
-  # vs self  (mixed)
-  tdmm_sbm_sim[s] = tdmm_sbm_llik(mixed_edge_array, C = roles_mixed, omega = block_omega, selfEdges = TRUE, directed = TRUE)
-  # discrete
-  tdd_sbm_ll[s] = tdmm_sbm_llik(mixed_edge_array, C = tdd_roles, omega = tdd_omega, selfEdges = TRUE, directed = TRUE)
-  # vs mixed
-  tdmm_sbm_fit[s] = tdmm_sbm_llik(mixed_edge_array, C = tdmm_sbm_roles, omega = tdmm_sbm_omega, selfEdges = TRUE, directed = TRUE)
-  
+  tdd_sbm = sbmt(mixed_edge_edglist, maxComms = K, degreeCorrect = 3, directed = TRUE, klPerNetwork = kl_per_network)
+  tdd_roles = matrix(0, N, K); for (i in 1:N) {tdd_roles[i, tdd_sbm$FoundComms[i]+1] = 1}; rownames(tdd_roles) = 1:N
+  # plot(tdd_sbm)
+  # plot(colSums(tdmm_sbm_omega), type = "l)
+  # evaluate likelihood of mixed edge array using params found by discrete model
+  tdd_roles = sweep(tdd_roles, 2, colSums(tdd_roles), FUN="/") # column normalize
+  tmp = sapply(tdd_sbm$EdgeMatrix, as.vector)
+  tdmm_discrete_fit[s] = tdmm_sbm_llik(mixed_edge_array, C = tdd_roles, omega = tdd_sbm$EdgeMatrix, selfEdges = TRUE, directed = TRUE)
 }
 
 tdmm_vs_tdd_sbm_ll = tdmm_sbm_ll - tdd_sbm_ll #(scale by difference in parameters?)
