@@ -47,10 +47,10 @@ mu_likelihood = mixmem_aux.mu_likelihood
 ##############################################################################################################
 # Load data in array (matrix) format
 
-SIM_params = pd.read_csv("../data/sim/mixed_params.csv")
+SIM_params = pd.read_csv("../sim_study/mixed_params.csv")
 K = SIM_params.K[0]
 
-SIM_matrix = pd.read_csv("../data/sim/mixed_edge_array.csv").to_numpy()
+SIM_matrix = pd.read_csv("../sim_study/mixed_edge_array.csv").to_numpy()
 N = SIM_matrix.shape[0]
 T = int(SIM_matrix.shape[1]/N)
 SIM_matrix = SIM_matrix.reshape(N, N, T, order = 'F')

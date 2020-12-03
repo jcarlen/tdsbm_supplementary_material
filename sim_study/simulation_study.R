@@ -444,9 +444,9 @@ for (s in 1:N_sim) {
   roles_mixed = generate_roles(N, role_types = mixed_role_options, type = "mixed", rel_freq = rep(1,nrow(mixed_role_options))) #can also try 1:nrow(mixed_role_options)
   mixed_edge_array = generate_multilayer_array(roles_mixed, block_omega, type = "mixed")
   #without randomness: mixed_edge_array = array(unlist(lapply(1:Time, function(i) {roles_mixed %*% block_omega[,,i] %*% t(roles_mixed)})), dim = c(N, N, Time))
-  write.csv(mixed_edge_array, paste0("../data/sim/mixed_edge_array.csv"), row.names = FALSE)
+  write.csv(mixed_edge_array, paste0("../sim_study/mixed_edge_array.csv"), row.names = FALSE)
   params = data.frame(K = K)
-  write.csv(params, paste0("../data/sim/mixed_params.csv"), row.names = FALSE)
+  write.csv(params, paste0("../sim_study/mixed_params.csv"), row.names = FALSE)
   # run mixed
   system("python3 tdmm_sbm_sim_study.py")
   tdmm_sbm_roles = read.csv("../sim_study/SIM_roles.csv")
