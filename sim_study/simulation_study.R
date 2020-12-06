@@ -17,6 +17,7 @@ library(sbmt)
 library(ppsbm)
 library(fossil) #for adj rand index
 library(gtools) #for permutations
+library(xtable)
 
 # generate_multilayer_array function ----
 
@@ -391,10 +392,12 @@ tdd_results = readRDS("sim_study/tdd_results.RDS")
 
 # Add results to summary table
 
-tdd_results_30$sim_method = gsub(tdd_results_30$sim_method, pattern = "-0", replacement = "")
-tdd_results_30$sim_method = gsub(tdd_results_30$sim_method, pattern = "-3", replacement = " DC")
-tdd_results_30$fit_method = gsub(tdd_results_30$fit_method, pattern = "-0", replacement = "")
-tdd_results_30$fit_method = gsub(tdd_results_30$fit_method, pattern = "-3", replacement = " DC")
+tdd_results_30$sim_method = toupper(tdd_results_30$sim_method)
+tdd_results_30$fit_method = toupper(tdd_results_30$fit_method)
+tdd_results_30$sim_method = gsub(tdd_results_30$sim_method, pattern = "-0", replacement = " no DC")
+tdd_results_30$sim_method = gsub(tdd_results_30$sim_method, pattern = "-3", replacement = "")
+tdd_results_30$fit_method = gsub(tdd_results_30$fit_method, pattern = "-0", replacement = " no DC")
+tdd_results_30$fit_method = gsub(tdd_results_30$fit_method, pattern = "-3", replacement = "")
 
 tdd_results_mean = lapply(tdd_results, function(x) {sapply(x, mean)})
 tdd_results_sd = lapply(tdd_results, function(x) {sapply(x, sd)})
@@ -405,8 +408,9 @@ tdd_results_30$LLIK_sim = paste0(round(sapply(tdd_results_mean, "[[", "tdd_sbm_s
 tdd_results_30$LLIK_diff = paste0(round(sapply(tdd_results_mean, "[[", "tdd_sim_vs_fit_method")), " (", round(sapply(tdd_results_sd, "[[", "tdd_sim_vs_fit_method"), 1), ")")
 tdd_results_30$`Est k (ppsbm)` = paste0(round(sapply(tdd_results_mean, "[[", "tdd_sbm_est_K")))
 
-tdd_results_30 = tdd_results_30[,!names(tdd_results_30) %in% c("sim_method","fit_method")]
+#tdd_results_30 = tdd_results_30[,!names(tdd_results_30) %in% c("sim_method","fit_method")]
 
+print(xtable(tdd_results_30))
 
 # ppsbm, no degree correction case. their model works as expected ----
 # Wants a seperate class for each degree-correcton level (but note the LLIK_sim and LLIK_diff results use the true K)
@@ -417,14 +421,14 @@ tdd_results_30 = tdd_results_30[,!names(tdd_results_30) %in% c("sim_method","fit
 
 #mixed_role_options_2 = matrix(c(1,0)[permutations(2, 2)],factorial(2),2) #with data on the boundary it works
 mixed_role_options_2 = matrix(c(.25,.75, 1, 0)[permutations(4, 2)], nrow(permutations(4,2)), 2) #with data on the boundary it works
-mixed_role_options_2 = matrix(c(.25,.75)[permutations(2, 2)], nrow(permutations(2,2)), 2) #with data on the boundary it works
+#mixed_role_options_2 = matrix(c(.25,.75)[permutations(2, 2)], nrow(permutations(2,2)), 2) #with data on the boundary it works
 mixed_role_options_3 = matrix(c(0,.25,.75)[permutations(3, 3)], nrow(permutations(3,2)), 3)
 #mixed_role_options_2 = matrix(rep(1:5, 2), ncol = 2) #identifiability issues if all evenly split
 #mixed_role_options_3 = matrix(rep(1:5, 3), ncol = 3) 
 mixed_role_options_list = list(mixed_role_options_2, mixed_role_options_3)
 
 
-i = 2
+i = 1
 N = N_set[i]
 K = K_set[i]
 omega = omega_list[[i]]
@@ -443,11 +447,13 @@ setwd("mixed_model_implementation_python") # assume starting from tdsbm_suppleme
 
 for (s in 1:N_sim) {
   
-  #roles_mixed = matrix(sample(1:(N*K), replace = TRUE), ncol = K); roles_mixed = sweep(roles_mixed, 2, colSums(roles_mixed), FUN="/")
+  roles_mixed = matrix(sample(1:(N*K), replace = TRUE), ncol = K)
   #image(roles_mixed %*% block_omega[, , 1] %*% t(roles_mixed))
-  roles_mixed = generate_roles(N, role_types = mixed_role_options, type = "mixed", rel_freq = rep(1,nrow(mixed_role_options))) #can also try 1:nrow(mixed_role_options)
-  roles_mixed = la
-  block_omega = la_omega
+  #roles_mixed = generate_roles(N, role_types = mixed_role_options, type = "mixed", rel_freq = rep(1,nrow(mixed_role_options))) #can also try 1:nrow(mixed_role_options)
+  roles_mixed = sweep(roles_mixed, 2, apply(roles_mixed, 2, min), "-")
+  roles_mixed = sweep(roles_mixed, 2, colSums(roles_mixed), "/")
+  
+  #roles_mixed = la; block_omega = la_omega
   mixed_edge_array = generate_multilayer_array(roles_mixed, block_omega, type = "mixed")
 
   #without randomness: mixed_edge_array = array(unlist(lapply(1:Time, function(i) {roles_mixed %*% block_omega[,,i] %*% t(roles_mixed)})), dim = c(N, N, Time))
@@ -466,10 +472,6 @@ for (s in 1:N_sim) {
   tdmm_sbm_omega_array = array(unlist(tdmm_sbm_omega), dim = c(K,K,Time))
   tdmm_sbm_mape[s] = mean(abs(tdmm_sbm_omega_array - block_omega_ordered)/block_omega_ordered+1)
 
-  #compare data matrix reconstruction
-  # mean(mixed_edge_array[,,16] - as.matrix(tdmm_sbm_roles) %*% tdmm_sbm_omega_array[,,16] %*% t(as.matrix(tdmm_sbm_roles)))
-  # mean(mixed_edge_array[,,16] - as.matrix(roles_mixed) %*% block_omega[,,16] %*% as.matrix(t(roles_mixed)))
-  
   if (verbose) {
     par(mfrow = c(K+1,K)); par(mai = rep(.6,4))
     # mixed role comparison
@@ -483,6 +485,10 @@ for (s in 1:N_sim) {
       points(apply(block_omega_ordered, 3, dplyr::nth, i), col = "red", type = "l")
     }
   }
+  
+  #compare data matrix reconstruction
+  # mean(mixed_edge_array[,,16] - as.matrix(tdmm_sbm_roles) %*% tdmm_sbm_omega_array[,,16] %*% t(as.matrix(tdmm_sbm_roles)))
+  # mean(mixed_edge_array[,,16] - as.matrix(roles_mixed) %*% block_omega[,,16] %*% as.matrix(t(roles_mixed)))
   
   # vs self  (mixed)
   tdmm_sbm_sim[s] = tdmm_sbm_llik(A = mixed_edge_array, C = roles_mixed, omega = block_omega, selfEdges = TRUE, directed = TRUE)
