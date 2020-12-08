@@ -37,7 +37,7 @@ options(mc.cores = ceiling(parallel::detectCores()/2))
 #   la ####
 
 # Convert hourly trips to hourly matrices
-A_la = edgelist_to_adj(la_byhour, selfedges = TRUE, as.array = TRUE, directed = TRUE)
+A_la = edgelist_to_adj(la_byhour, selfEdges = TRUE, as.array = TRUE, directed = TRUE)
 
 # Data for Stan 
 la_data <- list(
@@ -51,7 +51,7 @@ la_data <- list(
 #   sf ####
 
 # Convert hourly trips to hourly matrices
-A_sf = edgelist_to_adj(sf_byhour, selfedges = TRUE, as.array = TRUE, directed = TRUE)
+A_sf = edgelist_to_adj(sf_byhour, selfEdges = TRUE, as.array = TRUE, directed = TRUE)
 
 # Data for Stan 
 sf_data <- list(
@@ -65,7 +65,7 @@ sf_data <- list(
 #   ny_hm (manhattan (home) subset) ####
 
 # Convert hourly trips to hourly matrices
-A_ny_hm = edgelist_to_adj(ny_byhour_hm, selfedges = TRUE, as.array = TRUE, directed = TRUE)
+A_ny_hm = edgelist_to_adj(ny_byhour_hm, selfEdges = TRUE, as.array = TRUE, directed = TRUE)
 
 # Data for Stan 
 ny_hm_data <- list(
@@ -79,7 +79,7 @@ ny_hm_data <- list(
 #   ny (too big) ####
 # #
 # # Convert hourly trips to hourly matrices
-# A_ny = edgelist_to_adj(ny_byhour, selfedges = FALSE, as.array = TRUE, directed = TRUE)
+# A_ny = edgelist_to_adj(ny_byhour, selfEdges = FALSE, as.array = TRUE, directed = TRUE)
 # #
 # # Data for Stan 
 # ny_data <- list(
