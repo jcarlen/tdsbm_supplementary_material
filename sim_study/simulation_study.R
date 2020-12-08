@@ -127,9 +127,9 @@ curve(a*sin(x*2*pi/T)+a, 0, T, ylim = c(0, ymax), main = ("1 to 2"), xlab = "")
 curve(a*sin(x*2*pi/T-1)/2+a, 0, T, ylim = c(0, ymax), main = ("1 to 3"), xlab = "")
 curve(-a*sin(x*2*pi/T)+a, 0, T, ylim = c(0, ymax), main = ("2 to 1"), xlab = "")
 curve(b*sin(x*pi/T)^3+ b, 0, T, ylim = c(0, ymax), main = ("2 to 2"), xlab = "")
-curve(a*sin(x*2*pi/T-2)/4+a, 0, T, ylim = c(0, ymax), main = ("2 to 3"), xlab = "")
+curve(a*sin(x*4*pi/T-2)/2+a, 0, T, ylim = c(0, ymax), main = ("2 to 3"), xlab = "")
 curve(-a*sin(x*2*pi/T-1)/2+a, 0, T, ylim = c(0, ymax), main = ("3 to 1"), xlab = "")
-curve(-a*sin(x*2*pi/T-2)/4+a, 0, T, ylim = c(0, ymax), main = ("3 to 2"), xlab = "")
+curve(-a*sin(x*4*pi/T-2)/2+a, 0, T, ylim = c(0, ymax), main = ("3 to 2"), xlab = "")
 curve(0*x+b, 0, T, ylim = c(0, ymax), main = ("3 to 3"), xlab = "")
 dev.off()
 rm(T)
@@ -140,8 +140,8 @@ curve(a*sin(x*2*pi/Time)+a, 0, Time, ylim = c(0, ymax))
 curve(-a*sin(x*2*pi/Time)+a, 0, Time, add = TRUE, lty = 2)
 curve(a*sin(x*2*pi/Time-1)/2+a, 0, Time, col = "blue", add = TRUE)
 curve(-a*sin(x*2*pi/Time-1)/2+a, 0, Time, col = "blue", add = TRUE, lty = 2)
-curve(a*sin(x*2*pi/Time-2)/4+a, 0, Time, col = "green", add = TRUE)
-curve(-a*sin(x*2*pi/Time-2)/4+a, 0, Time, col = "green", add = TRUE, lty = 2)
+curve(a*sin(x*4*pi/Time-2)/2+a, 0, Time, col = "green", add = TRUE)
+curve(-a*sin(x*4*pi/Time-2)/2+a, 0, Time, col = "green", add = TRUE, lty = 2)
 curve(b*sin(x*pi/Time) + b, 0, Time, col = "red", add = TRUE)
 curve(b*sin(x*pi/Time)^3+ b, 0, Time, col = "red", add = TRUE, lty = 2)
 curve(0*x+b, 0, Time, col = "red", add = TRUE, lty = 3)
@@ -152,8 +152,8 @@ omega_21 = -a*sin(x*2*pi/Time)+a
 omega_22 = b*sin(x*pi/Time)^3+ b
 omega_13 =  a*sin(x*2*pi/Time-1)/2+a
 omega_31 = -a*sin(x*2*pi/Time-1)/2+a
-omega_23 =  a*sin(x*2*pi/Time-2)/4+a
-omega_32 = -a*sin(x*2*pi/Time-2)/4+a
+omega_23 =  a*sin(x*4*pi/Time-2)/2+a
+omega_32 = -a*sin(x*4*pi/Time-2)/2+a
 omega_33 = 0*x + b
 
 omega_2 = array(rbind(omega_11, omega_21, omega_12, omega_22), dim = c(2, 2, Time)) #left most index moves fastest
@@ -428,8 +428,8 @@ mixed_role_options_3 = matrix(c(0,.25,.75)[permutations(3, 3)], nrow(permutation
 mixed_role_options_list = list(mixed_role_options_2, mixed_role_options_3)
 
 
-i = 1
-N = N_set[i]
+i = 2
+N = N_set[1]
 K = K_set[i]
 omega = omega_list[[i]]
 block_omega = omega*N^2/K^2 #these weights should align it with degree corrected example in this case (equally frequent roles)
@@ -447,18 +447,28 @@ setwd("mixed_model_implementation_python") # assume starting from tdsbm_suppleme
 
 for (s in 1:N_sim) {
   
-  roles_mixed = matrix(sample(1:(N*K), replace = TRUE), ncol = K)
+  #roles_mixed = matrix(sample(1:(N*K), replace = TRUE), ncol = K)
+  roles_mixed = matrix(sample(1:5, size = N*K, replace = TRUE), ncol = K)
   #image(roles_mixed %*% block_omega[, , 1] %*% t(roles_mixed))
   #roles_mixed = generate_roles(N, role_types = mixed_role_options, type = "mixed", rel_freq = rep(1,nrow(mixed_role_options))) #can also try 1:nrow(mixed_role_options)
   roles_mixed = sweep(roles_mixed, 2, apply(roles_mixed, 2, min), "-")
   roles_mixed = sweep(roles_mixed, 2, colSums(roles_mixed), "/")
   
-  #roles_mixed = la; block_omega = la_omega
+  # la data
+  # Time = 24; roles_mixed = la; block_omega = la_omega; 
+  # {la = as.matrix(read.csv("../mixed_model_results/LA_3_roles.csv")[,-1])
+  # round(la/rowSums(la),3)
+  # la_omega = array(unlist(read.csv("../mixed_model_results/LA_3_omega.csv", sep = ",", header = T)), dim = c(3,3,24)) # reconstruct result in same form as discrete
+  # block_omega = la_omega}
+  # la = t(apply(la, 1, sample))
+  # block_omega = array(apply(block_omega, 3, function(x)x+runif(min = 0, max = 10, nrow(x)*ncol(x))), dim = c(3,3,Time))
+  # Time = 16; roles_mixed = la; K = 3; block_omega = omega_3*nrow(la)^2/K^2; 
+  
   mixed_edge_array = generate_multilayer_array(roles_mixed, block_omega, type = "mixed")
 
   #without randomness: mixed_edge_array = array(unlist(lapply(1:Time, function(i) {roles_mixed %*% block_omega[,,i] %*% t(roles_mixed)})), dim = c(N, N, Time))
   write.csv(mixed_edge_array, paste0("../sim_study/mixed_edge_array.csv"), row.names = FALSE)
-  params = data.frame(K = K)
+  params = data.frame(K = K, N = N, Time = Time)
   write.csv(params, paste0("../sim_study/mixed_params.csv"), row.names = FALSE)
   # run mixed
   system("python3 tdmm_sbm_sim_study.py")
@@ -474,16 +484,16 @@ for (s in 1:N_sim) {
 
   if (verbose) {
     par(mfrow = c(K+1,K)); par(mai = rep(.6,4))
+    for (i in 1:K^2) { #omega comparison
+      plot(as.numeric(tdmm_sbm_omega[i,]), type = "l", ylim = c(0,max(c(max(tdmm_sbm_omega), max(block_omega_ordered)))))
+      points(apply(block_omega_ordered, 3, dplyr::nth, i), col = "red", type = "l")
+    }
     # mixed role comparison
     axes = 1:2
     plot((roles_mixed[,block_order])[,axes], xlim = c(0,max(cbind(roles_mixed, tdmm_sbm_roles))), ylim = c(0,max(cbind(roles_mixed, tdmm_sbm_roles))))
     points(tdmm_sbm_roles[,axes], col = "red") 
     # overall activity pattern comparison
     plot(colSums(apply(block_omega, 3, unlist)), type = "l"); points(colSums(tdmm_sbm_omega), col = "red", type = "l")
-    for (i in 1:K^2) { #omega comparison
-      plot(as.numeric(tdmm_sbm_omega[i,]), type = "l", ylim = c(0,max(c(max(tdmm_sbm_omega), max(block_omega_ordered)))))
-      points(apply(block_omega_ordered, 3, dplyr::nth, i), col = "red", type = "l")
-    }
   }
   
   #compare data matrix reconstruction
