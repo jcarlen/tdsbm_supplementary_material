@@ -5,8 +5,8 @@
 #   linked  "http://cmatias.perso.math.cnrs.fr/Docs/ppsbm-files.zip (under "R code with datasets analyses")
 #   with the entry for the  publication: "Catherine Matias, Tabea Rebafka & Fanny Villers, A semiparametric extension of the stochastic block model for longitudinal networks. Biometrika, 105(3): 665-680, 2018."
 #
-# USER NOTES: Upate path_to_london_data below for loading London_cycles_dynsbm.Rdata and London_cycles_locations_stations.txt (in ppsbm-files folder)
-#             Can also load the final data object sbmt_london_cycles_data.RData
+# USER NOTES: Upate path_to_london_data below for loading London_cycles_dynsbm.R(data and London_cycles_locations_stations.txt (in ppsbm-files folder)
+#             Can also just load the final data object sbmt_london_cycles_data.RData in tdsbm_supplementary_material/sim_study/output
 # -------------------------------------------------------------------------------------------------------------
 # libraries ----
 
