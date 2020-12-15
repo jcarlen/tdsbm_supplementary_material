@@ -61,19 +61,19 @@ Sys.time()
 found_comm_stations_dc0 = setNames(lbs_output_dc0$FoundComms, nm = as.vector(station_numbers[names(lbs_output_dc0$FoundComms)])); table(found_comm_stations_dc0)
 found_comm_stations_dc3 = setNames(lbs_output_dc3$FoundComms, nm = as.vector(station_numbers[names(lbs_output_dc3$FoundComms)])); table(found_comm_stations_dc3)
 
-jpeg("sim_study/output/london_bikes_no_dc.jpeg", width = 800, quality = 100) 
+jpeg("sim_study/output/london_bikes_no_dc_vs_dc.jpeg", width = 800, quality = 100) 
 
 par(mfrow = c(1,2))
 
 # without correction
 plot(locations[match(names(found_comm_stations_dc0), locations$Id), c("long","lat")], 
   col = found_comm_stations_dc0 + 1,
-  pch = 16, main = "sbmt blocks no degree correction")
+  pch = 16, main = "TDD-SBM blocks no degree correction")
 
 # with
 plot(locations[match(names(found_comm_stations_dc3), locations$Id), c("long","lat")], 
   col = setNames(1:6, c(6,3,2,4,5,1))[as.character(found_comm_stations_dc3 + 1)],
-  pch = 16, main = "sbmt blocks degree corrected")
+  pch = 16, main = "TDD-SBM blocks degree corrected")
 
 dev.off() 
 
@@ -84,18 +84,26 @@ plot(lbs_output_dc0, mai = rep(.3, 4))
 # degree correction
 plot(lbs_output_dc3, mai = rep(.3, 4))
 
-# compare highly active station block ----
+# compare the highly active station blocks ----
+
+# ** With degree correction, a number of stations that have similar activity patterns to the very high-activity stations (by King’s Cross and Waterloo railway stations), 
+# but lower overall activity, are grouped with those high-activity stations. 
+# This shows how degree correction helps us detect a *type* of activity over time as opposed to a type AND level of activity over time. ** 
+
+# --------------------
 
 # no degreee correction
 station_output_info = cbind(locations[match(names(found_comm_stations_dc0), locations$Id),], block = found_comm_stations_dc0)
 belgrove_block = station_output_info %>% filter(name == "Belgrove Street, Kings Cross") %>% pull(block)
 station_output_info %>% filter(block == belgrove_block) #without degree correcton, a small group containing only Belgrove Street, Kings Cross; Waterloo Station 3, Waterloo; Waterloo Station 1, Waterloo 
+# station_output_info %>% filter(block == belgrove_block) %>% pull(name) %>% sort() # see block member stations
 
 # degreee correction
 
 station_output_info_dc = cbind(locations[match(names(found_comm_stations_dc3), locations$Id),], block = found_comm_stations_dc3)
 belgrove_block_dc = station_output_info_dc %>% filter(name == "Belgrove Street, Kings Cross") %>% pull(block)
 station_output_info %>% filter(block == belgrove_block_dc) #with degree correcton, a larger group 
+# station_output_info_dc %>% filter(block == belgrove_block_dc) %>% pull(name) %>% sort() # see block member stations
 
 plot_grid(
   plot_grid(nrow =2,
@@ -117,5 +125,5 @@ plot_grid(
             ggplot(aes(x = hour, y = count, group = EndStation.Name)) +geom_line(alpha = .5) + ggtitle("in-traffic to block (degree correction)"))
 )
 
-# save all objects
+# save all objects ----
 save.image("sim_study/output/sbmt_london_cycles_data.RData")
