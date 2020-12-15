@@ -1,22 +1,26 @@
-# Run sbmt on london cycles data used in ppsbm paper. 
+# Run sbmt on london cycles data used in Matias et al. PPSBM paper: "A semiparametric extension of the stochastic block model for longitudinal networks: Semiparametric estimation in PPSBM"
 # Jane Carlen
 # Created: 9-14-20
-# Download data from: http://cmatias.perso.math.cnrs.fr/
+# Download dlondon bike ddata from: http://cmatias.perso.math.cnrs.fr/
 #   linked  "http://cmatias.perso.math.cnrs.fr/Docs/ppsbm-files.zip (under "R code with datasets analyses")
 #   with the entry for the  publication: "Catherine Matias, Tabea Rebafka & Fanny Villers, A semiparametric extension of the stochastic block model for longitudinal networks. Biometrika, 105(3): 665-680, 2018."
 #
-# USER NOTES: Upate path for loading London_cycles_dynsbm.Rdata and London_cycles_locations_stations.txt (in ppsbm-files folder)
+# USER NOTES: Upate path_to_london_data below for loading London_cycles_dynsbm.Rdata and London_cycles_locations_stations.txt (in ppsbm-files folder)
 #             Can also load the final data object sbmt_london_cycles_data.RData
 # -------------------------------------------------------------------------------------------------------------
 # libraries ----
+
 # devtools::install_github("jcarlen/sbm", subdir = "sbmt") 
 library(sbmt) 
 library(tidyverse)
 library(cowplot)
 
 # load data (after setting working directory to top of downloaded ppsbm-files folder, see link above) ----
-load("~/Downloads/ppsbm-files/data/London_cycles_dynsbm.Rdata") #for data.day1
-locations <- read.table('~/Downloads/ppsbm-files/data/London_cycles_locations_stations.txt',header=T,sep=";")
+
+path_to_london_data = "~/Downloads/ppsbm-files/data"
+
+load(file.path(path_to_london_data, "London_cycles_dynsbm.Rdata")) #for data.day1
+locations <- read.table(file.path(path_to_london_data, "London_cycles_locations_stations.txt"),header=T,sep=";")
 
 #   station info ----
 

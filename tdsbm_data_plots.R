@@ -31,6 +31,9 @@ package_list = c("ggplot2", "dplyr", "tidyr", "ggmap","reshape2",
 # load all packages
 lapply(package_list, require, character.only = TRUE)
 
+# ggplot2 theme
+theme_set(theme_minimal())
+
 ################################################################################################
 # 1. Clean Data ####
 ################################################################################################
@@ -853,7 +856,6 @@ lapal[3] = "#D9D1CE"; lapal[4] = "green4"; lapal[5] = "red"; lapal[6] = "violet"
 la_zone_discrete = ggplot() + geom_polygon(data = lazd.spdf,
                                            aes(x = long, y = lat, group = group, fill = zone_type)) +
   coord_map(xlim= c(-118.2748, -118.225), ylim = c(34.02, 34.07)) +
-  theme_minimal() + 
   scale_fill_manual(values = alpha(lapal,.5), name = "zone type") +
   ggtitle("Discrete Roles versus LA Zoning") +
   geom_point(data = la_discrete, aes(x = lon, y = lat, color = role, size = degree/max(degree))) +
@@ -879,7 +881,6 @@ la_zone_continuous = ggplot() + geom_polygon(data = lazd.spdf,
                                              aes(x = long, y = lat, group = group, fill = zone_type)) +
   coord_map(xlim= c(-118.2748, -118.225),  ylim = c(34.02, 34.07)) +
   scale_fill_manual(values = alpha(lapal,.5), name = "zone type") +
-  theme_minimal() + 
   geom_point(data = la_continuous, aes(x = lon, y = lat, color = role, size = C_total)) +
   ggtitle("Mixed-Membership Roles versus LA Zoning") +
   scale_color_gradient(low = "white", high = "black", limits = c(0,1), breaks = c(.1,.9),
