@@ -387,8 +387,8 @@ tdd_results = apply(tdd_results_30, 1, function(x) {
    return(results)
 })
 
-#saveRDS(tdd_results, "sim_study/tdd_results.RDS")
-tdd_results = readRDS("sim_study/tdd_results.RDS")
+#saveRDS(tdd_results, "sim_study/output/tdd_results.RDS")
+tdd_results = readRDS("sim_study/output/tdd_results.RDS")
 
 # Add results to summary table
 
@@ -467,18 +467,18 @@ for (s in 1:N_sim) {
   mixed_edge_array = generate_multilayer_array(roles_mixed, block_omega, type = "mixed")
 
   #without randomness: mixed_edge_array = array(unlist(lapply(1:Time, function(i) {roles_mixed %*% block_omega[,,i] %*% t(roles_mixed)})), dim = c(N, N, Time))
-  write.csv(mixed_edge_array, paste0("../sim_study/mixed_edge_array.csv"), row.names = FALSE)
+  write.csv(mixed_edge_array, paste0("../sim_study/output/mixed_edge_array.csv"), row.names = FALSE)
   params = data.frame(K = K, N = N, Time = Time)
-  write.csv(params, paste0("../sim_study/mixed_params.csv"), row.names = FALSE)
+  write.csv(params, paste0("../sim_study/output/mixed_params.csv"), row.names = FALSE)
   # run mixed
   system("python3 tdmm_sbm_sim_study.py")
-  tdmm_sbm_roles = read.csv("../sim_study/SIM_roles.csv")
+  tdmm_sbm_roles = read.csv("../sim_study/output/SIM_roles.csv")
   
   block_order = permutations(K, K)[which.min(apply(permutations(K, K), 1, function(x) { sum(abs(roles_mixed[,x] - tdmm_sbm_roles)) })),]
   
   tdmm_sbm_role_err[s] = sum(abs(roles_mixed[,block_order] - tdmm_sbm_roles))/K #try all orders
   block_omega_ordered = array(sapply(1:Time, function(i) {block_omega[block_order,block_order,i]}), dim = c(K, K, Time))
-  tdmm_sbm_omega = read.csv("../sim_study/SIM_omega.csv")
+  tdmm_sbm_omega = read.csv("../sim_study/output/SIM_omega.csv")
   tdmm_sbm_omega_array = array(unlist(tdmm_sbm_omega), dim = c(K,K,Time))
   tdmm_sbm_mape[s] = mean(abs(tdmm_sbm_omega_array - block_omega_ordered)/block_omega_ordered+1)
 

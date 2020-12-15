@@ -47,10 +47,10 @@ mu_likelihood = mixmem_aux.mu_likelihood
 ##############################################################################################################
 # Load data in array (matrix) format
 
-SIM_params = pd.read_csv("../sim_study/mixed_params.csv")
+SIM_params = pd.read_csv("../sim_study/output/mixed_params.csv")
 K = SIM_params.K[0]
 
-SIM_matrix = pd.read_csv("../sim_study/mixed_edge_array.csv").to_numpy()
+SIM_matrix = pd.read_csv("../sim_study/output/mixed_edge_array.csv").to_numpy()
 N = SIM_matrix.shape[0]
 T = int(SIM_matrix.shape[1]/N)
 SIM_matrix = SIM_matrix.reshape(N, N, T, order = 'F')
@@ -82,5 +82,5 @@ SIM_llmax=np.max(SIM_ll,0)
 #Save
 for blocks_i in range(0,np.size(numblocklist,0)):
     numblocks=numblocklist[blocks_i]
-    pd.DataFrame(SIM_fit[SIM_maxind[blocks_i]][blocks_i][0].reshape([numblocks**2, T], order = 'F')).to_csv("../sim_study/SIM_omega.csv", index=False)
-    pd.DataFrame(SIM_fit[SIM_maxind[blocks_i]][blocks_i][1]).to_csv("../sim_study/SIM_roles.csv", index=False)
+    pd.DataFrame(SIM_fit[SIM_maxind[blocks_i]][blocks_i][0].reshape([numblocks**2, T], order = 'F')).to_csv("../sim_study/output/SIM_omega.csv", index=False)
+    pd.DataFrame(SIM_fit[SIM_maxind[blocks_i]][blocks_i][1]).to_csv("../sim_study/output/SIM_roles.csv", index=False)

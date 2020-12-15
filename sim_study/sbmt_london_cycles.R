@@ -5,8 +5,8 @@
 #   linked  "http://cmatias.perso.math.cnrs.fr/Docs/ppsbm-files.zip (under "R code with datasets analyses")
 #   with the entry for the  publication: "Catherine Matias, Tabea Rebafka & Fanny Villers, A semiparametric extension of the stochastic block model for longitudinal networks. Biometrika, 105(3): 665-680, 2018."
 #
-# NOTE: Upate path for loading London_cycles_dynsbm.Rdata and London_cycles_locations_stations.txt (in ppsbm-files folder)
-#       Can also load the final data object sbmt_london_cycles_data.RData and jump to modeling
+# USER NOTES: Upate path for loading London_cycles_dynsbm.Rdata and London_cycles_locations_stations.txt (in ppsbm-files folder)
+#             Can also load the final data object sbmt_london_cycles_data.RData
 # -------------------------------------------------------------------------------------------------------------
 # libraries ----
 # devtools::install_github("jcarlen/sbm", subdir = "sbmt") 
@@ -57,6 +57,8 @@ Sys.time()
 found_comm_stations_dc0 = setNames(lbs_output_dc0$FoundComms, nm = as.vector(station_numbers[names(lbs_output_dc0$FoundComms)])); table(found_comm_stations_dc0)
 found_comm_stations_dc3 = setNames(lbs_output_dc3$FoundComms, nm = as.vector(station_numbers[names(lbs_output_dc3$FoundComms)])); table(found_comm_stations_dc3)
 
+jpeg("sim_study/output/london_bikes_no_dc.jpeg", width = 800, quality = 100) 
+
 par(mfrow = c(1,2))
 
 # without correction
@@ -66,8 +68,10 @@ plot(locations[match(names(found_comm_stations_dc0), locations$Id), c("long","la
 
 # with
 plot(locations[match(names(found_comm_stations_dc3), locations$Id), c("long","lat")], 
-  col = found_comm_stations_dc3 + 1,
+  col = setNames(1:6, c(6,3,2,4,5,1))[as.character(found_comm_stations_dc3 + 1)],
   pch = 16, main = "sbmt blocks degree corrected")
+
+dev.off() 
 
 #   plot estimated block-to-block parameters ----
 
@@ -83,30 +87,31 @@ station_output_info = cbind(locations[match(names(found_comm_stations_dc0), loca
 belgrove_block = station_output_info %>% filter(name == "Belgrove Street, Kings Cross") %>% pull(block)
 station_output_info %>% filter(block == belgrove_block) #without degree correcton, a small group containing only Belgrove Street, Kings Cross; Waterloo Station 3, Waterloo; Waterloo Station 1, Waterloo 
 
-plot_grid(nrow =2,
+# degreee correction
+
+station_output_info_dc = cbind(locations[match(names(found_comm_stations_dc3), locations$Id),], block = found_comm_stations_dc3)
+belgrove_block_dc = station_output_info_dc %>% filter(name == "Belgrove Street, Kings Cross") %>% pull(block)
+station_output_info %>% filter(block == belgrove_block_dc) #with degree correcton, a larger group 
+
+plot_grid(
+  plot_grid(nrow =2,
           data.day1 %>% filter(StartStation.Name %in% (station_output_info %>% filter(block == belgrove_block) %>% pull(name))) %>%
             group_by(StartStation.Name, hour) %>% summarize(count = n()) %>% 
-            ggplot(aes(x = hour, y = count, group = StartStation.Name)) + geom_line() + ggtitle("out-traffic from block (no degree correction)"),
+            ggplot(aes(x = hour, y = count, group = StartStation.Name)) + geom_line(alpha = .5) + ggtitle("out-traffic from block (no degree correction)"),
           
           data.day1 %>% filter(EndStation.Name %in% (station_output_info %>% filter(block == belgrove_block) %>% pull(name))) %>% 
             group_by(EndStation.Name, hour) %>% summarize(count = n()) %>% 
-            ggplot(aes(x = hour, y = count, group = EndStation.Name)) + geom_line() + ggtitle("in-traffic to block (no degree correction)"))
-
-
-# degreee correction
-
-station_output_info = cbind(locations[match(names(found_comm_stations_dc3), locations$Id),], block = found_comm_stations_dc3)
-belgrove_block = station_output_info %>% filter(name == "Belgrove Street, Kings Cross") %>% pull(block)
-station_output_info %>% filter(block == belgrove_block) #without degree correcton, a small group containing only Belgrove Street, Kings Cross; Waterloo Station 3, Waterloo; Waterloo Station 1, Waterloo 
-
-plot_grid(nrow =2,
-          data.day1 %>% filter(StartStation.Name %in% (station_output_info %>% filter(block == belgrove_block) %>% pull(name))) %>%
+            ggplot(aes(x = hour, y = count, group = EndStation.Name)) + geom_line(alpha = .5) + ggtitle("in-traffic to block (no degree correction)"))
+,
+  plot_grid(nrow =2,
+          data.day1 %>% filter(StartStation.Name %in% (station_output_info_dc %>% filter(block == belgrove_block_dc) %>% pull(name))) %>%
             group_by(StartStation.Name, hour) %>% summarize(count = n()) %>% 
-            ggplot(aes(x = hour, y = count, group = StartStation.Name)) +geom_line() + ggtitle("out-traffic from block (degree correction)"),
+            ggplot(aes(x = hour, y = count, group = StartStation.Name)) +geom_line(alpha = .5) + ggtitle("out-traffic from block (degree correction)"),
                    
-          data.day1 %>% filter(EndStation.Name %in% (station_output_info %>% filter(block == belgrove_block) %>% pull(name))) %>% 
+          data.day1 %>% filter(EndStation.Name %in% (station_output_info_dc %>% filter(block == belgrove_block_dc) %>% pull(name))) %>% 
             group_by(EndStation.Name, hour) %>% summarize(count = n()) %>% 
-            ggplot(aes(x = hour, y = count, group = EndStation.Name)) +geom_line() + ggtitle("in-traffic to block (degree correction)"))
+            ggplot(aes(x = hour, y = count, group = EndStation.Name)) +geom_line(alpha = .5) + ggtitle("in-traffic to block (degree correction)"))
+)
 
 # save all objects
-save.image("sim_study/sbmt_london_cycles_data.RData")
+save.image("sim_study/output/sbmt_london_cycles_data.RData")
