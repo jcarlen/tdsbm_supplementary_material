@@ -488,7 +488,7 @@ svdplot2 <- function(city.in, city.out, n.svd = 2, time = 24, title = "Singular 
                         "direction" = rep(c("in-degree", "out-degree"), each = time*n.svd))
   ggplot(city.svd, aes(x = hour, y = value, group = line, color = vector, lty = direction)) + 
     xlim(0,23) + 
-    geom_line() + ggtitle(title) + facet_wrap(~vector) #theme(legend.title = element_blank())
+    geom_line() + ggtitle(title) + facet_wrap(~vector) + theme_minimal()#theme(legend.title = element_blank())
 }
 
 #   LA ####
