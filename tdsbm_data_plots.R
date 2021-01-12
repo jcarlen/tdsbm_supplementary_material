@@ -343,7 +343,6 @@ sf_trip_count_by_hour <- ggplot(sf.byhour, aes(x=hour, y = count, group = day_ty
 
 ggsave("IMG/sf_trip_count_by_hour.png", plot = sf_trip_count_by_hour)
 
-
 #   NY ####
 
 ny.overall = ny1610 %>% filter(Start.Station.ID != End.Station.ID) %>%
@@ -370,11 +369,47 @@ ny_trip_count_by_hour <- ggplot(ny.byhour, aes(x=hour, y = trips, group = day_ty
 
 ggsave("IMG/ny_trip_count_by_hour.png", plot = ny_trip_count_by_hour)
 
-#   Combined plot ####
+
+#   Combined plots ####
 combined_by_hour_plot = plot_grid(ny_trip_count_by_hour, sf_trip_count_by_hour, la_trip_count_by_hour,
                                   nrow = 1, rel_widths = c(.5,.3,.3))
 ggsave("IMG/trip_count_by_hour.png", plot = combined_by_hour_plot, width = 10, height = 4)
 
+#     with sf top stations ----
+
+top_id_sf = sf.station.all %>% 
+  arrange(-degree) %>% 
+  head(6) %>% 
+  pull(id)
+
+sf_top_station_traffic = sf %>% 
+  group_by(Start.Station, start_station_id, hour) %>% 
+  summarize(departing = sum(count)) %>% 
+  left_join(sf %>% 
+              group_by(End.Station, hour) %>% 
+              summarize(arriving = sum(count)), by = c("Start.Station" = "End.Station", "hour" = "hour")) %>% 
+  select(Start.Station, departing, arriving, start_station_id, hour) %>% 
+  filter(start_station_id %in% top_id_sf) %>%
+  mutate(Start.Station = gsub(Start.Station, pattern = " \\(.*", replacement = "")) %>% 
+  pivot_longer(cols = c(departing, arriving), names_to = "trip type", values_to = "trips") %>% 
+  unique() %>%
+  ggplot() + 
+  geom_line(aes(x = hour, y = trips, lty = `trip type`)) + 
+  facet_wrap(~Start.Station, nrow = 2, scales = "free_y") +
+  ylab("trips") +
+  theme_classic() +
+  theme(legend.title = element_blank(), legend.position = "left",
+        legend.text = element_text(size = 16),
+        plot.title = element_text(hjust = 0.5, size = 18), 
+        strip.text = element_text(hjust = 0.5, size = 14),
+        axis.text = element_text(size = 14),
+        axis.ticks.y=element_blank(),
+        axis.text.y=element_blank()) +
+  ggtitle("Trips to/from Busiest San Francisco Stations by Hour")
+
+plot_grid(combined_by_hour_plot, sf_top_station_traffic, nrow = 2)
+
+ggsave("IMG/trip_count_by_hour_and_sf_stations.png", width = 10, height = 6)
 
 #--------------------------------------------------------------------------------------------
 #  1e. REMOVE WEEKENDS  ####
@@ -449,7 +484,7 @@ for (i in 0:23) {
 }
 
 #----------------------------------------------------------------------------------------------
-# 1h. Save without weekends (for reproducibility and use by mixed model) ---- ----
+#  1h. Save without weekends (for reproducibility and use by mixed model) ---- ----
 
 write.csv(la[,c("start_time", "end_time", "start_station_id", "end_station_id",
                 "start_lat", "start_lon", "end_lat", "end_lon")], "data/cleaned/LA16_cleaned_final_no_weekend.csv", row.names = F)
@@ -461,6 +496,11 @@ write.csv(ny1610[,c("Start.Time", "Stop.Time", "Start.Station.ID", "End.Station.
                     "Start.Station.Latitude", "Start.Station.Longitude", 
                     "End.Station.Latitude", "End.Station.Longitude")], "data/cleaned/Oct16_nyc_cleaned_final_no_weekend.csv", row.names = F)
 
+
+#----------------------------------------------------------------------------------------------
+#  1i. Save cleaned data so far ----
+
+save.image("data/clean_city_data.RData")
 
 ################################################################################################
 # 2. Data exploratory Analysis
@@ -982,6 +1022,35 @@ plot_sf_discrete = ggmap(sf_background) +
         axis.ticks.y =element_blank(),
         axis.line.y = element_blank())
 
+#           + most popular within-block trips (to support last-mile arg.) ----
+
+# sf morning within-block trips 
+most_pop_am = left_join(sf_discrete %>% select(id, role), rbind(sf_byhour[[8]], sf_byhour[[9]]), by = c("id" = 'start_station_id')) %>% 
+  left_join(sf_discrete %>% select(id, role), by = c('end_station_id' = 'id')) %>%
+  filter(role.x == role.y) %>% 
+  group_by(id, end_station_id, role.x, role.y) %>% 
+  summarize(x = sum(x)) %>% 
+  arrange(-x) %>% 
+  head(10)
+
+most_pop_am
+sf_station %>% filter(station_id %in% most_pop_am$id)
+# note the Market at Sansome station is next to Montgomery, one of two most popular BART stations: https://www.bart.gov/sites/default/files/docs/June18FactSheet_v1.pdf
+sf_station %>% filter(station_id %in% most_pop_am$end_station_id)
+
+#  sf evening within-block trips 
+most_pop_pm = left_join(sf_discrete %>% select(id, role), rbind(sf_byhour[[17]], sf_byhour[[18]]), by = c("id" = 'start_station_id')) %>% 
+  left_join(sf_discrete %>% select(id, role), by = c('end_station_id' = 'id')) %>%
+  filter(role.x == role.y) %>% 
+  group_by(id, end_station_id, role.x, role.y) %>% 
+  summarize(x = sum(x)) %>% 
+  arrange(-x) %>% 
+  head(10)
+
+most_pop_pm
+sf_station %>% filter(station_id %in% most_pop_pm$id)
+sf_station %>% filter(station_id %in% most_pop_pm$end_station_id)
+
 #         continuous ####
 
 plot_sf_continuous = ggmap(sf_background) +
@@ -1470,24 +1539,27 @@ ny.plot.order = c("M (home) to M (home)", "M (home) to M (work)",  "M (home) to 
 ################################################################################################
 # 6d. STATIC models (time-independent) ----
 
-#     run the static models (load saved output) ####
+#     run the static models (load saved output for NY which is slow) ####
 
 #      pre-process all cities 
 la.tmp = data.frame(la %>% group_by(start_station_id, end_station_id) %>% summarize(count = sum(count)), stringsAsFactors = F)
 sf.tmp = data.frame(sf %>% group_by(start_station_id, end_station_id) %>% summarize(count = sum(count)), stringsAsFactors = F)
 ny.tmp = data.frame(ny1610 %>% group_by(Start.Station.ID, End.Station.ID) %>% summarize(count = sum(count)), stringsAsFactors = F)
 
+#     run models and save
 la2.T  = sbmt(list(la.tmp), maxComms = 2, degreeCorrect = 3, directed = T, klPerNetwork = 50, seed = 1)
 sf2.T  = sbmt(list(sf.tmp), maxComms = 2, degreeCorrect = 3, directed = T, klPerNetwork = 50, seed = 1)
 #ny2.T  = sbmt(list(ny.tmp), maxComms = 2, degreeCorrect = 3, directed = T, klPerNetwork = 50, seed = 1) <- slow, load pre-run
 #ny3.T  = sbmt(list(ny.tmp), maxComms = 3, degreeCorrect = 3, directed = T, klPerNetwork = 50, seed = 1)
-  saveRDS(la2.T, "discrete_model_results/la2_T.RDS")
-  saveRDS(sf2.T, "discrete_model_results/sf2_T.RDS")
-  #saveRDS(ny2.T, "discrete_model_results/ny2_T.RDS")
-  #saveRDS(ny3.T, "discrete_model_results/ny3_T.RDS")
 
-la2.T = readRDS("discrete_model_results/la2_T.RDS")
-sf2.T = readRDS("discrete_model_results/sf2_T.RDS")
+saveRDS(la2.T, "discrete_model_results/la2_T.RDS")
+saveRDS(sf2.T, "discrete_model_results/sf2_T.RDS")
+#saveRDS(ny2.T, "discrete_model_results/ny2_T.RDS")
+#saveRDS(ny3.T, "discrete_model_results/ny3_T.RDS")
+
+#    load pre-run models as necessary
+#la2.T = readRDS("discrete_model_results/la2_T.RDS")
+#sf2.T = readRDS("discrete_model_results/sf2_T.RDS")
 ny3.T = readRDS("discrete_model_results/ny3_T.RDS")
 
 la.static = left_join(la.station, data.frame(id =  names(la2.T$FoundComms), 
@@ -1501,7 +1573,7 @@ ny.static = left_join(ny1610.station, data.frame(id =  as.integer(names(ny3.T$Fo
 #       LA ----
 
 plot_la_static = ggmap(la_background) +
-  geom_point(data=la.static, shape = 21, aes(x=lon, y=lat, fill = block), size = 4) +
+  geom_point(data=la.static, shape = 21, aes(x=lon, y=lat, fill = block), size = 4, alpha = .7) +
   ggtitle("Los Angeles, Static Discrete Membership") +
   scale_fill_manual(values = c("black", "white")) +
   #scale_size(guide = "none") +
@@ -1521,7 +1593,7 @@ ggsave(filename = "IMG/la_static_discrete.png", plot_la_static)
 
 #       SF ----
 plot_sf_static = ggmap(sf_background) +
-  geom_point(data=sf.static, shape = 21, aes(x=lon, y=lat, fill = block), size = 4) +
+  geom_point(data=sf.static, shape = 21, aes(x=lon, y=lat, fill = block), size = 4, alpha = .7) +
   ggtitle("San Francisco, Static Discrete Membership") +
   scale_fill_manual(values = c("black", "white")) +
   #scale_size(guide = "none") +
@@ -1570,6 +1642,96 @@ plot_ny_static
 ggsave(filename = "IMG/la_sf_static_discrete.png", plot_grid(plot_la_static, plot_sf_static, ncol = 2, align = "h"), width = 9, height = 4)
 
 ggsave(filename = "IMG/ny_static_discrete.png", plot_ny_static)
+################################################################################################
+# 6e. NON-DEGREE-CORRECTED discrete models ----
+
+#     run the models without degree correction (just LA and SF for now, NY is slow) ####
+
+la2.0 = sbmt(la_byhour,  degreeCorrect = 0, directed = T, klPerNetwork = 50, maxComms = 2, seed = 1)
+sf2.0 = sbmt(sf_byhour,  degreeCorrect = 0, directed = T, klPerNetwork = 50, maxComms = 2, seed = 1)
+#ny2.0 = sbmt(ny_byhour,  degreeCorrect = 0, directed = T, klPerNetwork = 1, maxComms = 2, seed = 1)
+
+la.noDC = left_join(la.station, data.frame(id =  names(la2.0$FoundComms), 
+                                             block  =  as.factor((la2.0$FoundComms))))
+sf.noDC = left_join(sf.station, data.frame(id =  as.integer(names(sf2.0$FoundComms)), 
+                                             block  =  as.factor((sf2.0$FoundComms))), stringsAsFactors = F)
+#ny.noDC = left_join(ny1610.station, data.frame(id =  as.integer(names(ny3.T$FoundComms)), 
+#                                                 block  =  as.factor((ny3.T$FoundComms)), stringsAsFactors = F))
+
+#      plots ####
+#       LA ----
+
+plot_la_noDC = ggmap(la_background) +
+  geom_point(data=la.noDC, shape = 21, aes(x=lon, y=lat, fill = block, size = degree), alpha = .7) +
+  ggtitle("Los Angeles, Discrete no Degree Correction") +
+  scale_fill_manual(values = c("black", "white")) +
+  #scale_size(guide = "none") +
+  theme_classic() + theme(plot.title = element_text(hjust = 0.5)) +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.title.x = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.line.x = element_blank(),
+        axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y =element_blank(),
+        axis.line.y = element_blank())
+plot_la_noDC
+
+ggsave(filename = "IMG/la_noDC.png", plot_la_noDC)
+
+#       SF ----
+plot_sf_noDC = ggmap(sf_background) +
+  geom_point(data=sf.noDC, shape = 21, aes(x=lon, y=lat, fill = block, size = degree), alpha = .7) +
+  ggtitle("San Francisco, Discrete no Degree Correction") +
+  scale_fill_manual(values = c("black", "white")) +
+  #scale_size(guide = "none") +
+  theme_classic() + theme(plot.title = element_text(hjust = 0.5)) +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.title.x = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.line.x = element_blank(),
+        axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y =element_blank(),
+        axis.line.y = element_blank())
+plot_sf_noDC
+
+#       NY ----
+
+# plot_ny_noDC = ggmap(ny_background) +
+#   geom_point(data = ny.noDC, aes(x = lon, y = lat, color = block, fill = block,
+#                                    shape = block, size = degree), color = "black", alpha = .7) +
+#   ggtitle("New York, Discrete without Degree Correction") +
+#   xlim(-74.02,-73.93) + ylim(40.65, 40.8) +
+#   theme_classic() + theme(plot.title = element_text(hjust = 0.5)) +
+#   guides(size = guide_legend(order = 2)) +
+#   scale_fill_manual(name = "role", 
+#                     #labels = c("Brooklyn", "Manhattan (home)", "Manhattan (work)"), 
+#                     values = c("white", "gray", "black"), guide = guide_legend(order = 1)) + 
+#   scale_shape_manual(name = "role", 
+#                      #labels = c("Brooklyn", "Manhattan (home)", "Manhattan (work)"), 
+#                      values = c(24, 22, 21), guide = guide_legend(order = 1)) +
+#   scale_size(range = c(1,4)) +
+#   #xlab("longitude") + ylab("latitude")
+#   theme(plot.title = element_text(hjust = 0.5),
+#         axis.title.x = element_blank(),
+#         axis.text.x = element_blank(),
+#         axis.ticks.x = element_blank(),
+#         axis.line.x = element_blank(),
+#         axis.title.y = element_blank(),
+#         axis.text.y = element_blank(),
+#         axis.ticks.y =element_blank(),
+#         axis.line.y = element_blank())
+# plot_ny_noDC
+
+#     Final plots ----
+
+ggsave(filename = "IMG/la_sf_noDC_discrete.png", plot_grid(plot_la_noDC, plot_sf_noDC, ncol = 2, align = "h"), width = 9, height = 4)
+
+#ggsave(filename = "IMG/ny_noDC_discrete.png", plot_ny_noDC)
+
 ################################################################################################
 # 7. NEW YORK (MANHATTAN) SUBSET  ----
 #   Subset -- choose the smallest one for convenience ----
