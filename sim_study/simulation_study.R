@@ -344,9 +344,8 @@ simulate_tdd <- function(roles, omega,  dc_factors = NULL,
       ppsbm_block_omega = ppsbm_omega*array(table(ppsbm_roles_K) %*% t(table(ppsbm_roles_K)), dim = c(K, K, Time))
 
       # reorder if needed to compare omega against true 
-      block_order = permutations(K, K)[which.min(apply(permutations(K, K), 1, function(x) {
-        sum(abs(x[ppsbm_roles_K] - roles)) })),]
-      ppsbm_block_omega_ordered = array(sapply(1:Time, function(i) {block_omega[block_order,block_order,i]}), dim = c(K, K, Time))
+      block_order = permutations(K, K)[which.min(apply(permutations(K, K), 1, function(x) {sum(abs(x[ppsbm_roles_K] - roles)) })),]
+      ppsbm_block_omega_ordered = array(sapply(1:Time, function(i) {ppsbm_block_omega[block_order,block_order,i]}), dim = c(K, K, Time))
       
       tdd_sbm_mape[s] = mean(abs(ppsbm_block_omega_ordered - block_omega)/(block_omega))
       # use selfEdges FALSE since ppsbm fits without them? (but then adjust tdd_sbm block omega?)
@@ -387,7 +386,7 @@ simulate_tdd <- function(roles, omega,  dc_factors = NULL,
 
 tdd_table_30 = data.frame(expand.grid(K = K_set, N = N_set[1], sim_method = c("tdd-sbm-0", "tdd-sbm-3"), 
                                         fit_method = c("tdd-sbm-0", "tdd-sbm-3", "ppsbm")))
-
+  
 tdd_results_30 = apply(tdd_table_30[9,], 1, function(x) {
   cat("running for parameters:", x,"\n")
   K = as.numeric(x['K'])
@@ -461,21 +460,22 @@ print(xtable(tdd_tables[[1]]), include.rownames = FALSE)
 # 90 nodes
 print(xtable(tdd_tables[[2]]), include.rownames = FALSE)
 
-# summary: ppsbm, no degree correction case. their model works as expected ----
-# Wants a seperate class for each degree-correcton level (but note the LLIK_sim and LLIK_diff results use the true K)
-# Bike example (seperate script) shows how degree correction ib model -> group stations with similar behavior across activity levels
+#  SUMMARY: ----
+#   when estimation method is same as or generalization of simulation method results are good
+#   ppsbm and no degree correction TDD-SBM are similar
+#   With data from TDD-SBM (with degree correction), PPSBM estimation wants to make a separate block for each degree-correction level (but note the LLIK_sim and LLIK_diff results use the true K)
+#   Bike example (separate script) shows how degree correction in model -> group stations with similar behavior across activity levels
 
 # ---------------------------------------------------------------------------------------------------------------
 # 3. mixed-membership to show impact of potential model mis-specification ----
 
 #mixed_role_options_2 = matrix(c(1,0)[permutations(2, 2)],factorial(2),2) #with data on the boundary it works
-mixed_role_options_2 = matrix(c(.25,.75, 1, 0)[permutations(4, 2)], nrow(permutations(4,2)), 2) #with data on the boundary it works
+mixed_role_options_2 = matrix(c(.25,.75, .5, 1, 0)[permutations(5, 2)], nrow(permutations(5,2)), 2) #with data on the boundary it works
 #mixed_role_options_2 = matrix(c(.25,.75)[permutations(2, 2)], nrow(permutations(2,2)), 2) #with data on the boundary it works
 mixed_role_options_3 = matrix(c(0,.25,.75)[permutations(3, 3)], nrow(permutations(3,2)), 3)
 #mixed_role_options_2 = matrix(rep(1:5, 2), ncol = 2) #identifiability issues if all evenly split
 #mixed_role_options_3 = matrix(rep(1:5, 3), ncol = 3) 
 mixed_role_options_list = list(mixed_role_options_2, mixed_role_options_3)
-
 
 i = 2
 N = N_set[1]
