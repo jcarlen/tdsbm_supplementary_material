@@ -15,7 +15,7 @@
 # devtools::install_github("jcarlen/sbm", subdir = "sbmt") 
 library(sbmt)
 library(ppsbm)
-library(fossil) #for adj rand index
+library(fossil) #for adj rand index -- requires less manipulation of our output than version of ARI in ppsbm package
 library(gtools) #for permutations
 library(xtable)
 
@@ -118,33 +118,42 @@ curve(-a*sin(x*2*pi/Time)+a, 0, Time, ylim = c(0, ymax))
 curve(b*sin(x*pi/Time)^3+ b, 0, Time, ylim = c(0, ymax))
 
 # show three-block curves
-T = Time #set just for labeling, then remove
-png("IMG/sim_omega_3.png", width = 600)
+t = Time #set just for labeling, then remove
+png("IMG/sim_omega_3.png", width = 600, height = 400, units = "px", pointsize = 12)
 par(mai =c(.4,.7,.3,.2))
 par(mfrow = c(3, 3))
-curve(b*sin(x*pi/T) + b, 0, T, ylim = c(0, ymax), main = ("1 to 1"), xlab = "")
-curve(a*sin(x*2*pi/T)+a, 0, T, ylim = c(0, ymax), main = ("1 to 2"), xlab = "")
-curve(a*sin(x*2*pi/T-1)/2+a, 0, T, ylim = c(0, ymax), main = ("1 to 3"), xlab = "")
-curve(-a*sin(x*2*pi/T)+a, 0, T, ylim = c(0, ymax), main = ("2 to 1"), xlab = "")
-curve(b*sin(x*pi/T)^3+ b, 0, T, ylim = c(0, ymax), main = ("2 to 2"), xlab = "")
-curve(a*sin(x*4*pi/T-2)/2+a, 0, T, ylim = c(0, ymax), main = ("2 to 3"), xlab = "")
-curve(-a*sin(x*2*pi/T-1)/2+a, 0, T, ylim = c(0, ymax), main = ("3 to 1"), xlab = "")
-curve(-a*sin(x*4*pi/T-2)/2+a, 0, T, ylim = c(0, ymax), main = ("3 to 2"), xlab = "")
-curve(0*x+b, 0, T, ylim = c(0, ymax), main = ("3 to 3"), xlab = "")
+curve(b*sin(x*pi/t) + b, 0, t, ylim = c(0, ymax), main = ("1 to 1"), xlab = "")
+  points(x, b*sin(x*pi/t) + b, cex = .9, col = "red", pch = 16)
+curve(a*sin(x*2*pi/t)+a, 0, t, ylim = c(0, ymax), main = ("1 to 2"), xlab = "")
+  points(x, a*sin(x*2*pi/t)+a, cex = .9, col = "red", pch = 16)
+curve(a*sin(x*2*pi/t-1)/2+a, 0, t, ylim = c(0, ymax), main = ("1 to 3"), xlab = "")
+  points(x, a*sin(x*2*pi/t-1)/2+a, cex = .9, col = "red", pch = 16)
+curve(-a*sin(x*2*pi/t)+a, 0, t, ylim = c(0, ymax), main = ("2 to 1"), xlab = "")
+  points(x, -a*sin(x*2*pi/t)+a, cex = .9, col = "red", pch = 16)
+curve(b*sin(x*pi/t)^3+ b, 0, t, ylim = c(0, ymax), main = ("2 to 2"), xlab = "")
+  points(x, b*sin(x*pi/t)^3+ b, cex = .9, col = "red", pch = 16)
+curve(a*sin(x*4*pi/t-2)/2+a, 0, t, ylim = c(0, ymax), main = ("2 to 3"), xlab = "")
+  points(x, a*sin(x*4*pi/t-2)/2+a, cex = .9, col = "red", pch = 16)
+curve(-a*sin(x*2*pi/t-1)/2+a, 0, t, ylim = c(0, ymax), main = ("3 to 1"), xlab = "")
+  points(x, -a*sin(x*2*pi/t-1)/2+a, cex = .9, col = "red", pch = 16)
+curve(-a*sin(x*4*pi/t-2)/2+a, 0, t, ylim = c(0, ymax), main = ("3 to 2"), xlab = "")
+  points(x, -a*sin(x*4*pi/t-2)/2+a, cex = .9, col = "red", pch = 16)
+curve(0*x+b, 0, t, ylim = c(0, ymax), main = ("3 to 3"), xlab = "")
+  points(x, 0*x+b, cex = .9, col = "red", pch = 16)
 dev.off()
-rm(T)
+rm(t)
 
 #show overlapping
-par(mfrow = c(1,1))
-curve(a*sin(x*2*pi/Time)+a, 0, Time, ylim = c(0, ymax))
-curve(-a*sin(x*2*pi/Time)+a, 0, Time, add = TRUE, lty = 2)
-curve(a*sin(x*2*pi/Time-1)/2+a, 0, Time, col = "blue", add = TRUE)
-curve(-a*sin(x*2*pi/Time-1)/2+a, 0, Time, col = "blue", add = TRUE, lty = 2)
-curve(a*sin(x*4*pi/Time-2)/2+a, 0, Time, col = "green", add = TRUE)
-curve(-a*sin(x*4*pi/Time-2)/2+a, 0, Time, col = "green", add = TRUE, lty = 2)
-curve(b*sin(x*pi/Time) + b, 0, Time, col = "red", add = TRUE)
-curve(b*sin(x*pi/Time)^3+ b, 0, Time, col = "red", add = TRUE, lty = 2)
-curve(0*x+b, 0, Time, col = "red", add = TRUE, lty = 3)
+# par(mfrow = c(1,1))
+# curve(a*sin(x*2*pi/Time)+a, 0, Time, ylim = c(0, ymax))
+# curve(-a*sin(x*2*pi/Time)+a, 0, Time, add = TRUE, lty = 2)
+# curve(a*sin(x*2*pi/Time-1)/2+a, 0, Time, col = "blue", add = TRUE)
+# curve(-a*sin(x*2*pi/Time-1)/2+a, 0, Time, col = "blue", add = TRUE, lty = 2)
+# curve(a*sin(x*4*pi/Time-2)/2+a, 0, Time, col = "green", add = TRUE)
+# curve(-a*sin(x*4*pi/Time-2)/2+a, 0, Time, col = "green", add = TRUE, lty = 2)
+# curve(b*sin(x*pi/Time) + b, 0, Time, col = "red", add = TRUE)
+# curve(b*sin(x*pi/Time)^3+ b, 0, Time, col = "red", add = TRUE, lty = 2)
+# curve(0*x+b, 0, Time, col = "red", add = TRUE, lty = 3)
 
 omega_11 = b*sin(x*pi/Time) + b
 omega_12 =  a*sin(x*2*pi/Time)+a
@@ -260,12 +269,12 @@ simulate_tdd <- function(roles, omega,  dc_factors = NULL,
     
     # generate simulated networks
     if (sim_method == "tdd-sbm-0") { # no degree correction (when generating data) case  ----
-      discrete_edge_array = generate_multilayer_array(roles, omega, type = "discrete")
+      sim_discrete_edge_array = generate_multilayer_array(roles, omega, type = "discrete")
     }
     if (sim_method == "tdd-sbm-3") { # degree correction case  ----
-      discrete_edge_array = generate_multilayer_array(roles, omega, dc_factors, type = "discrete")
+      sim_discrete_edge_array = generate_multilayer_array(roles, omega, dc_factors, type = "discrete")
     }
-    discrete_edge_list = adj_to_edgelist(discrete_edge_array, directed = TRUE, selfEdges = TRUE)
+    discrete_edge_list = adj_to_edgelist(sim_discrete_edge_array, directed = TRUE, selfEdges = TRUE)
   
     # fit simulated networks
     if (grepl(fit_method, pattern = "tdd-sbm")) {
@@ -286,20 +295,19 @@ simulate_tdd <- function(roles, omega,  dc_factors = NULL,
 
       # adjusted rand index
       tdd_sbm_ari[s] = adj.rand.index(tdd_sbm$FoundComms[order(as.numeric(names(tdd_sbm$FoundComms)))], roles)
-    
-      # MAPE of omega
+      # MAPE of omega (don't need to worry about ordering?)
       tdd_sbm_mape[s] = mean(abs(sapply(tdd_sbm$EdgeMatrix, matrix) - apply(block_omega, 3, matrix))/apply(block_omega, 3, matrix))
     
       # compare likelihood for true vs. fit parameters for simulated data
-      tdd_sbm_sim[s] = tdd_sbm_llik(discrete_edge_array, roles = roles - 1, omega = block_omega, degreeCorrect = dc_sim, directed = TRUE, selfEdges = TRUE)
-      tdd_sbm_fit[s] = tdd_sbm_llik(discrete_edge_array, roles = tdd_sbm$FoundComms, omega = tdd_sbm$EdgeMatrix, degreeCorrect = dc_fit, directed = TRUE, selfEdges = TRUE)
+      tdd_sbm_sim[s] = tdd_sbm_llik(sim_discrete_edge_array, roles = roles - 1, omega = block_omega, degreeCorrect = dc_sim, directed = TRUE, selfEdges = TRUE)
+      tdd_sbm_fit[s] = tdd_sbm_llik(sim_discrete_edge_array, roles = tdd_sbm$FoundComms, omega = tdd_sbm$EdgeMatrix, degreeCorrect = dc_fit, directed = TRUE, selfEdges = TRUE)
     }
     if (fit_method == "ppsbm") {
       # - fit ppsbm ----
       
       # Use the "hist" method because agrees more closely with out discrete Time slices and requires less manipulation
       #reformat data for ppsbm fit
-      Nijk = sapply(adj_to_edgelist(discrete_edge_array, directed = TRUE, selfEdges = FALSE, removeZeros = FALSE), "[[", 3)
+      Nijk = sapply(adj_to_edgelist(sim_discrete_edge_array, directed = TRUE, selfEdges = FALSE, removeZeros = FALSE), "[[", 3)
       #dim(Nijk) #should have ncol == Time
       
       #ppsbm_fit
@@ -328,16 +336,22 @@ simulate_tdd <- function(roles, omega,  dc_factors = NULL,
       
       # true K
       # role detection
-      ppsbm_roles_K = apply(ppsbm[[K]]$tau, 2, which.max)
+      ppsbm_roles_K = apply(ppsbm[[K]]$tau, 2, which.max) #which.max to discretize
+      
       tdd_sbm_ari[s] = adj.rand.index(apply(ppsbm[[K]]$tau, 2, which.max), roles)
       # omegas 
       ppsbm_omega = exp(array(ppsbm[[K]]$"logintensities.ql", dim = c(K, K, Time)))
       ppsbm_block_omega = ppsbm_omega*array(table(ppsbm_roles_K) %*% t(table(ppsbm_roles_K)), dim = c(K, K, Time))
 
-      tdd_sbm_mape[s] = mean(abs(ppsbm_block_omega - block_omega)/(block_omega))
+      # reorder if needed to compare omega against true 
+      block_order = permutations(K, K)[which.min(apply(permutations(K, K), 1, function(x) {
+        sum(abs(x[ppsbm_roles_K] - roles)) })),]
+      ppsbm_block_omega_ordered = array(sapply(1:Time, function(i) {block_omega[block_order,block_order,i]}), dim = c(K, K, Time))
+      
+      tdd_sbm_mape[s] = mean(abs(ppsbm_block_omega_ordered - block_omega)/(block_omega))
       # use selfEdges FALSE since ppsbm fits without them? (but then adjust tdd_sbm block omega?)
-      tdd_sbm_sim[s] = tdd_sbm_llik(discrete_edge_array, roles = roles - 1, omega = block_omega, degreeCorrect = dc_sim, directed = TRUE, selfEdges = TRUE) #roles should be 0-indexed
-      tdd_sbm_fit[s] = tdd_sbm_llik(discrete_edge_array, roles = ppsbm_roles_K - 1, omega = ppsbm_block_omega, degreeCorrect = 0, directed = TRUE, selfEdges = TRUE)
+      tdd_sbm_sim[s] = tdd_sbm_llik(sim_discrete_edge_array, roles = roles - 1, omega = block_omega, degreeCorrect = dc_sim, directed = TRUE, selfEdges = TRUE) #roles should be 0-indexed
+      tdd_sbm_fit[s] = tdd_sbm_llik(sim_discrete_edge_array, roles = ppsbm_roles_K - 1, omega = ppsbm_block_omega, degreeCorrect = 0, directed = TRUE, selfEdges = TRUE)
     }
   
   }
@@ -369,14 +383,12 @@ simulate_tdd <- function(roles, omega,  dc_factors = NULL,
   # results33 = simulate_tdd(roles, omega = omega_2, dc_factors = dc_fctrs, sim_method = "tdd-sbm-3", fit_method = "tdd-sbm-3")
 
 
-#   run tdd-sbm simulation ----
+#   run tdd-sbm simulation (once)----
 
-tdd_results_30 = data.frame(expand.grid(K = K_set, N = N_set[1], sim_method = c("tdd-sbm-0", "tdd-sbm-3"), 
-                                        fit_method = c("tdd-sbm-0", "tdd-sbm-3", "ppsbm")))
-tdd_results_90 = data.frame(expand.grid(K = K_set, N = N_set[2], sim_method = c("tdd-sbm-0", "tdd-sbm-3"), 
+tdd_table_30 = data.frame(expand.grid(K = K_set, N = N_set[1], sim_method = c("tdd-sbm-0", "tdd-sbm-3"), 
                                         fit_method = c("tdd-sbm-0", "tdd-sbm-3", "ppsbm")))
 
-tdd_results = apply(tdd_results_30, 1, function(x) {
+tdd_results_30 = apply(tdd_table_30[9,], 1, function(x) {
   cat("running for parameters:", x,"\n")
   K = as.numeric(x['K'])
   roles = generate_roles(N = as.numeric(x['N']), role_types = K, type = "discrete", rel_freq = rep(1, K)) #<- note: can alter relative role frequency by changing this specification. E.g. 1:K would give increasing frequency to higher-numbered roles.
@@ -386,33 +398,70 @@ tdd_results = apply(tdd_results_30, 1, function(x) {
                           N_sim = 10, verbose = FALSE)
    return(results)
 })
+#saveRDS(tdd_results_30, "sim_study/output/tdd_results_30.RDS")
 
-#saveRDS(tdd_results, "sim_study/output/tdd_results.RDS")
-tdd_results = readRDS("sim_study/output/tdd_results.RDS")
+tdd_table_90 = data.frame(expand.grid(K = K_set, N = N_set[2], sim_method = c("tdd-sbm-0", "tdd-sbm-3"), 
+                                       fit_method = c("tdd-sbm-0", "tdd-sbm-3", "ppsbm")))
 
-# Add results to summary table
+tdd_results_90 = apply(tdd_table_90, 1, function(x) {
+  cat("running for parameters:", x,"\n")
+  K = as.numeric(x['K'])
+  roles = generate_roles(N = as.numeric(x['N']), role_types = K, type = "discrete", rel_freq = rep(1, K)) #<- note: can alter relative role frequency by changing this specification. E.g. 1:K would give increasing frequency to higher-numbered roles.
+  omega = omega_list[as.character(K)][[1]]
+  dc_fctrs = generate_dc_factors(roles, dc_levels = c(1:5)) #<- note: can alter degree correction levels by changing this specification. E.g. 1:2 would give only two levels of degree heterogeneity
+  results = simulate_tdd(roles, omega, dc_fctrs, sim_method = x[['sim_method']], fit_method = x[['fit_method']],
+                         N_sim = 10, verbose = FALSE)
+  return(results)
+})
+#saveRDS(tdd_results_90, "sim_study/output/tdd_results_90.RDS")
 
-tdd_results_30$sim_method = toupper(tdd_results_30$sim_method)
-tdd_results_30$fit_method = toupper(tdd_results_30$fit_method)
-tdd_results_30$sim_method = gsub(tdd_results_30$sim_method, pattern = "-0", replacement = " no DC")
-tdd_results_30$sim_method = gsub(tdd_results_30$sim_method, pattern = "-3", replacement = "")
-tdd_results_30$fit_method = gsub(tdd_results_30$fit_method, pattern = "-0", replacement = " no DC")
-tdd_results_30$fit_method = gsub(tdd_results_30$fit_method, pattern = "-3", replacement = "")
+#  load saved results and reformat ---- 
 
-tdd_results_mean = lapply(tdd_results, function(x) {sapply(x, mean)})
-tdd_results_sd = lapply(tdd_results, function(x) {sapply(x, sd)})
+tdd_results_30 = readRDS("sim_study/output/tdd_results_30.RDS")
+tdd_results_90 = readRDS("sim_study/output/tdd_results_90.RDS")
 
-tdd_results_30$ARI = paste0(round(sapply(tdd_results_mean, "[[", "tdd_sbm_ari"), 2), " (", round(sapply(tdd_results_sd, "[[", "tdd_sbm_ari"), 2), ")")
-tdd_results_30$MAPE = paste0(round(sapply(tdd_results_mean, "[[", "tdd_sbm_mape"), 2), " (", round(sapply(tdd_results_sd, "[[", "tdd_sbm_mape"), 2), ")")
-tdd_results_30$LLIK_sim = paste0(round(sapply(tdd_results_mean, "[[", "tdd_sbm_sim")), " (", round(sapply(tdd_results_sd, "[[", "tdd_sbm_sim"), 1), ")")
-tdd_results_30$LLIK_diff = paste0(round(sapply(tdd_results_mean, "[[", "tdd_sim_vs_fit_method")), " (", round(sapply(tdd_results_sd, "[[", "tdd_sim_vs_fit_method"), 1), ")")
-tdd_results_30$`Est k (ppsbm)` = paste0(round(sapply(tdd_results_mean, "[[", "tdd_sbm_est_K")))
+tdd_results = list(list(results = tdd_results_30, table = tdd_table_30), 
+                   list(results = tdd_results_90, table = tdd_table_90))
 
-#tdd_results_30 = tdd_results_30[,!names(tdd_results_30) %in% c("sim_method","fit_method")]
+tdd_tables = lapply(tdd_results, function(x) {
+  
+  tdd_table = x$table
+  tdd_result = x$results
+  
+  # Add results to summary table
 
-print(xtable(tdd_results_30))
+  tdd_table$sim_method = toupper(tdd_table$sim_method)
+  tdd_table$fit_method = toupper(tdd_table$fit_method)
+  tdd_table$sim_dc = gsub(tdd_table$sim_method, pattern = "TDD-SBM-0", replacement = "F")
+  tdd_table$sim_dc = gsub(tdd_table$sim_dc, pattern = "TDD-SBM-3", replacement = "T")
+  tdd_table$fit_dc = gsub(tdd_table$fit_method, pattern = "TDD-SBM-0|PPSBM", replacement = "F")
+  tdd_table$fit_dc = gsub(tdd_table$fit_dc, pattern = "TDD-SBM-3", replacement = "T")
+  tdd_table$fit_method = gsub(tdd_table$fit_method, pattern = "-[0-9]", replacement = "")
 
-# ppsbm, no degree correction case. their model works as expected ----
+  tdd_results_mean = lapply(tdd_result, function(x) {sapply(x, mean)})
+  tdd_results_sd = lapply(tdd_result, function(x) {sapply(x, sd)})
+
+  tdd_table$K = as.character(tdd_table$K) #for print formatting
+  tdd_table$N = as.character(tdd_table$N) #for print formatting
+  tdd_table$ARI = paste0(round(sapply(tdd_results_mean, "[[", "tdd_sbm_ari"), 2), " (", round(sapply(tdd_results_sd, "[[", "tdd_sbm_ari"), 2), ")")
+  tdd_table$MAPE = paste0(round(sapply(tdd_results_mean, "[[", "tdd_sbm_mape"), 2), " (", round(sapply(tdd_results_sd, "[[", "tdd_sbm_mape"), 2), ")")
+  tdd_table$LLIK_sim = paste0(round(sapply(tdd_results_mean, "[[", "tdd_sbm_sim")), " (", round(sapply(tdd_results_sd, "[[", "tdd_sbm_sim"), 1), ")")
+  tdd_table$LLIK_diff = paste0(round(sapply(tdd_results_mean, "[[", "tdd_sim_vs_fit_method")), " (", round(sapply(tdd_results_sd, "[[", "tdd_sim_vs_fit_method"), 1), ")")
+  tdd_table$`Est K (PPSBM)` = paste0(round(sapply(tdd_results_mean, "[[", "tdd_sbm_est_K")))
+  tdd_table$`Est K (PPSBM)` = gsub(tdd_table$`Est K (PPSBM)`, pattern = "NA", replacement = "-")
+
+  tdd_table = tdd_table[,c("K", "N", "sim_dc", "fit_dc", "fit_method", "ARI", "MAPE", "LLIK_sim", "LLIK_diff")] #"Est K (PPSBM)")
+
+  return(xtable(tdd_table))
+})
+
+# 30 nodes
+print(xtable(tdd_tables[[1]]), include.rownames = FALSE)
+
+# 90 nodes
+print(xtable(tdd_tables[[2]]), include.rownames = FALSE)
+
+# summary: ppsbm, no degree correction case. their model works as expected ----
 # Wants a seperate class for each degree-correcton level (but note the LLIK_sim and LLIK_diff results use the true K)
 # Bike example (seperate script) shows how degree correction ib model -> group stations with similar behavior across activity levels
 
@@ -480,7 +529,7 @@ for (s in 1:N_sim) {
   block_omega_ordered = array(sapply(1:Time, function(i) {block_omega[block_order,block_order,i]}), dim = c(K, K, Time))
   tdmm_sbm_omega = read.csv("../sim_study/output/SIM_omega.csv")
   tdmm_sbm_omega_array = array(unlist(tdmm_sbm_omega), dim = c(K,K,Time))
-  tdmm_sbm_mape[s] = mean(abs(tdmm_sbm_omega_array - block_omega_ordered)/block_omega_ordered+1)
+  tdmm_sbm_mape[s] = mean(abs(tdmm_sbm_omega_array - block_omega_ordered)/block_omega_ordered) #+1)??
 
   if (verbose) {
     par(mfrow = c(K+1,K)); par(mai = rep(.6,4))
