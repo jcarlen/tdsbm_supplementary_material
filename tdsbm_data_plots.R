@@ -405,7 +405,7 @@ sf_top_station_traffic = sf %>%
         axis.text = element_text(size = 14),
         axis.ticks.y=element_blank(),
         axis.text.y=element_blank()) +
-  ggtitle("Trips to/from Busiest San Francisco Stations by Hour")
+  ggtitle("Weekday Trips to/from the Busiest San Francisco Stations by Hour")
 
 plot_grid(combined_by_hour_plot, sf_top_station_traffic, nrow = 2)
 
