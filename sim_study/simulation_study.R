@@ -560,14 +560,15 @@ simulate_tdmm <- function(roles, omega, n_sim = 10, n_iter = 10, directed = TRUE
    omega_ordered = array(sapply(1:Time, function(i) {omega[block_order,block_order,i]}), dim = c(K, K, Time))
    
    # store result metrics
-   tdmm_sbm_mare[s] = sum(abs(roles_mixed[,block_order] - tdmm_sbm_roles))/K #try all orders
+   
+   tdmm_sbm_mare[s] = sum(abs(roles_mixed[,block_order] - tdmm_sbm_roles))/K 
    tdmm_sbm_mape[s] = mean(abs(tdmm_sbm_omega_array - omega_ordered)/omega_ordered) #+1)??
    # llik of sim data under true model
    tdmm_sbm_sim[s] = tdmm_sbm_llik(A = sim_mixed_edge_array, C = roles_mixed, omega = omega, selfEdges = TRUE, directed = TRUE)
    # llik of sim data under estimated parameters
    tdmm_sbm_fit[s] = tdmm_sbm_llik(A = sim_mixed_edge_array, C = tdmm_sbm_roles, omega = tdmm_sbm_omega, selfEdges = TRUE, directed = TRUE)
    
-   # visualize tresults
+   # visualize results?
    if (verbose) {
      par(mfrow = c(K+1,K)); par(mai = rep(.6,4))
      for (i in 1:K^2) { #omega comparison
