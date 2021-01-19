@@ -68,7 +68,6 @@ generate_multilayer_array <- function(roles, omega, theta = NULL, type = "discre
   #  infer N, K, Time,
   N = ifelse(is.null(dim(roles)), length(roles), nrow(roles))
   K = ifelse("list" %in% class(omega), nrow(omega[[1]]), dim(omega)[1]) # number of blocks
-  cat("gen ",K)
   Time = ifelse("list" %in% class(omega), length(omega), dim(omega)[3])
   if (!"array" %in% class(omega)) {omega  = array(unlist(omega), dim = c(K,K,Time))} #make array if not already
   
@@ -540,8 +539,8 @@ simulate_tdmm <- function(roles, omega, n_sim = 10, n_iter = 10, directed = TRUE
   for (s in 1:n_sim) {
    
    # generate simulation  
-   sim_mixed_edge_array = generate_multilayer_array(roles_mixed, omega, type = "mixed")
-   #without randomness: sim_mixed_edge_array = array(unlist(lapply(1:Time, function(i) {roles_mixed %*% block_omega[,,i] %*% t(roles_mixed)})), dim = c(N, N, Time))
+   sim_mixed_edge_array = generate_multilayer_array(roles, omega, type = "mixed")
+   #without randomness: sim_mixed_edge_array = array(unlist(lapply(1:Time, function(i) {roles %*% block_omega[,,i] %*% t(roles)})), dim = c(N, N, Time))
    
    # store for python
    write.csv(sim_mixed_edge_array, "../sim_study/output/mixed_edge_array.csv", row.names = FALSE)
@@ -557,15 +556,15 @@ simulate_tdmm <- function(roles, omega, n_sim = 10, n_iter = 10, directed = TRUE
    
    # process output
    tdmm_sbm_omega_array = array(unlist(tdmm_sbm_omega), dim = c(K,K,Time))
-   block_order = permutations(K, K)[which.min(apply(permutations(K, K), 1, function(x) { sum(abs(roles_mixed[,x] - tdmm_sbm_roles)) })),]
+   block_order = permutations(K, K)[which.min(apply(permutations(K, K), 1, function(x) { sum(abs(roles[,x] - tdmm_sbm_roles)) })),]
    omega_ordered = array(sapply(1:Time, function(i) {omega[block_order,block_order,i]}), dim = c(K, K, Time))
    
    # store result metrics
    
-   tdmm_sbm_mare[s] = sum(abs(roles_mixed[,block_order] - tdmm_sbm_roles))/K 
+   tdmm_sbm_mare[s] = sum(abs(roles[,block_order] - tdmm_sbm_roles))/K 
    tdmm_sbm_mape[s] = mean(abs(tdmm_sbm_omega_array - omega_ordered)/omega_ordered) #+1)??
    # llik of sim data under true model
-   tdmm_sbm_sim[s] = tdmm_sbm_llik(A = sim_mixed_edge_array, C = roles_mixed, omega = omega, selfEdges = TRUE, directed = TRUE)
+   tdmm_sbm_sim[s] = tdmm_sbm_llik(A = sim_mixed_edge_array, C = roles, omega = omega, selfEdges = TRUE, directed = TRUE)
    # llik of sim data under estimated parameters
    tdmm_sbm_fit[s] = tdmm_sbm_llik(A = sim_mixed_edge_array, C = tdmm_sbm_roles, omega = tdmm_sbm_omega, selfEdges = TRUE, directed = TRUE)
    
@@ -578,14 +577,18 @@ simulate_tdmm <- function(roles, omega, n_sim = 10, n_iter = 10, directed = TRUE
      }
      # mixed role comparison
      axes = 1:2
-     plot((roles_mixed[,block_order])[,axes], xlim = c(0,max(cbind(roles_mixed, tdmm_sbm_roles))), ylim = c(0,max(cbind(roles_mixed, tdmm_sbm_roles))))
-     points(tdmm_sbm_roles[,axes], col = "red") 
+     plot((roles[,block_order])[,axes], 
+          xlim = c(0,max(cbind(roles, tdmm_sbm_roles))), 
+          ylim = c(0,max(cbind(roles, tdmm_sbm_roles))),
+          main = "Red = TRUE", type = "n")
+     text((roles[,block_order])[,axes], as.character(1:N), col = "red")  
+     text(tdmm_sbm_roles[,axes], as.character(1:N), col = "black") 
      # overall activity pattern comparison
      plot(colSums(apply(omega, 3, unlist)), type = "l"); points(colSums(tdmm_sbm_omega), col = "red", type = "l")
    
      #compare data matrix reconstruction
      # mean(sim_mixed_edge_array[,,1] - as.matrix(tdmm_sbm_roles) %*% tdmm_sbm_omega_array[,,1] %*% t(as.matrix(tdmm_sbm_roles)))
-     # mean(sim_mixed_edge_array[,,1] - as.matrix(roles_mixed) %*% omega[,,1] %*% as.matrix(t(roles_mixed)))
+     # mean(sim_mixed_edge_array[,,1] - as.matrix(roles) %*% omega[,,1] %*% as.matrix(t(roles)))
      
     }
 
@@ -634,18 +637,18 @@ tdmm_results_30 = lapply(1:length(K_set), function(i) {
     K = K_set[i]
     print(K)
     omega = omega_list[[i]]
-    print(omega[,,1])
     block_omega = omega*N^2/K^2 #agrees with tdd case with equal blocks
     #mixed_role_options = mixed_role_options_list[[i]]
     roles_mixed = matrix(sample(1:5, size = N*K, replace = TRUE), ncol = K)
     roles_mixed = sweep(roles_mixed, 2, apply(roles_mixed, 2, min), "-") #better
     roles_mixed = sweep(roles_mixed, 2, colSums(roles_mixed), "/")
-    simulate_tdmm(roles_mixed, block_omega, 
-                  n_sim = 2, #N_sim,
+    result = simulate_tdmm(roles_mixed, block_omega, 
+                  n_sim = 1, #N_sim,
                   n_iter = 2, #N_iter, 
-                  directed = TRUE, verbose = FALSE)
+                  directed = TRUE, verbose = TRUE)
     setwd("/Users/jcarlen/Documents/tdsbm_supplementary_material")
     #setwd("..")
+    return(result)
 })
 
 tdmm_table_30 = data.frame(expand.grid(K = K_set, N = N_set[1]))

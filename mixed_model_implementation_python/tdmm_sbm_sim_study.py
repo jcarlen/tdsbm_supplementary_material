@@ -49,13 +49,14 @@ mu_likelihood = mixmem_aux.mu_likelihood
 
 SIM_params = pd.read_csv("../sim_study/output/mixed_params.csv")
 K = SIM_params.K[0]
+n_iter = SIM_params.N_iter[0]
 
 SIM_matrix = pd.read_csv("../sim_study/output/mixed_edge_array.csv").to_numpy()
 N = SIM_matrix.shape[0]
 T = int(SIM_matrix.shape[1]/N)
 SIM_matrix = SIM_matrix.reshape(N, N, T, order = 'F')
 
-num_runs=5 #number of times we re-run the algorithm.
+num_runs=n_iter #number of times we re-run the algorithm.
 numblocklist = np.array(range(K,K+1)) #number of blocks to try
 
 # SIM TDMM-SBM for # Blocks in numblocklist
