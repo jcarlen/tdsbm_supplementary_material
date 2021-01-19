@@ -68,6 +68,7 @@ generate_multilayer_array <- function(roles, omega, theta = NULL, type = "discre
   #  infer N, K, Time,
   N = ifelse(is.null(dim(roles)), length(roles), nrow(roles))
   K = ifelse("list" %in% class(omega), nrow(omega[[1]]), dim(omega)[1]) # number of blocks
+  cat("gen ",K)
   Time = ifelse("list" %in% class(omega), length(omega), dim(omega)[3])
   if (!"array" %in% class(omega)) {omega  = array(unlist(omega), dim = c(K,K,Time))} #make array if not already
   
@@ -528,22 +529,22 @@ simulate_tdmm <- function(roles, omega, n_sim = 10, n_iter = 10, directed = TRUE
   Time = dim(omega)[3]
   
   # initialize output vectors ----
-  tdmm_sbm_mare = 1:N_sim #sum of abs error averaged over number of blocks (since columns are sum-1 normalized)
-  tdmm_sbm_mape = 1:N_sim
-  tdmm_sbm_sim =1:N_sim
-  tdmm_sbm_fit =1:N_sim
-  tdmm_discrete_fit =1:N_sim
-  fit_time = 1:N_sim #only filled in for ppsbm
+  tdmm_sbm_mare = 1:n_sim #sum of abs error averaged over number of blocks (since columns are sum-1 normalized)
+  tdmm_sbm_mape = 1:n_sim
+  tdmm_sbm_sim =1:n_sim
+  tdmm_sbm_fit =1:n_sim
+  tdmm_discrete_fit =1:n_sim
+  fit_time = 1:n_sim #only filled in for ppsbm
   # -----------------------------
   # run -----
-  for (s in 1:N_sim) {
+  for (s in 1:n_sim) {
    
    # generate simulation  
    sim_mixed_edge_array = generate_multilayer_array(roles_mixed, omega, type = "mixed")
    #without randomness: sim_mixed_edge_array = array(unlist(lapply(1:Time, function(i) {roles_mixed %*% block_omega[,,i] %*% t(roles_mixed)})), dim = c(N, N, Time))
    
    # store for python
-   write.csv(sim_mixed_edge_array, paste0("../sim_study/output/mixed_edge_array.csv"), row.names = FALSE)
+   write.csv(sim_mixed_edge_array, "../sim_study/output/mixed_edge_array.csv", row.names = FALSE)
    params = data.frame(K = K, N = N, Time = Time, N_iter = n_iter)
    write.csv(params, paste0("../sim_study/output/mixed_params.csv"), row.names = FALSE)
    
@@ -590,7 +591,12 @@ simulate_tdmm <- function(roles, omega, n_sim = 10, n_iter = 10, directed = TRUE
 
    # try fitting discrete models to data generated from mixed membership 
    sim_mixed_edgelist = adj_to_edgelist(sim_mixed_edge_array, directed = TRUE, selfEdges = TRUE, removeZeros = TRUE)
-   tdd_sbm = sbmt(sim_mixed_edgelist, maxComms = K, degreeCorrect = 3, directed = TRUE, klPerNetwork = N_iter)
+
+   if (verbose) { # print each fit's progress?
+     tdd_sbm = sbmt(sim_mixed_edgelist, maxComms = K, degreeCorrect = 3, directed = TRUE, klPerNetwork = N_iter)
+   } else {
+     log = capture.output({tdd_sbm = sbmt(sim_mixed_edgelist, maxComms = K, degreeCorrect = 3, directed = TRUE, klPerNetwork = N_iter)})
+   }
    # plot(tdd_sbm)
    # plot(colSums(tdmm_sbm_omega), type = "l")
    
@@ -605,12 +611,12 @@ simulate_tdmm <- function(roles, omega, n_sim = 10, n_iter = 10, directed = TRUE
   # results ----
   results = data.frame(
     # role detection
-    tdd_sbm_mare = tdd_sbm_mape,
+    tdmm_sbm_mare = tdmm_sbm_mare,
     # block-to-block activity detection
-    tdd_sbm_mape = tdd_sbm_mape,
+    tdmm_sbm_mape = tdmm_sbm_mape,
     # compare likelihood of data under fit vs. true model used to simulate the data
-    tdd_sbm_sim = tdd_sbm_sim,
-    tdd_sbm_fit = tdd_sbm_fit,
+    tdmm_sbm_sim = tdmm_sbm_sim,
+    tdmm_sbm_fit = tdmm_sbm_fit,
     tdmm_discrete_fit = tdmm_discrete_fit,
     fit_time = fit_time
   )
@@ -619,25 +625,30 @@ simulate_tdmm <- function(roles, omega, n_sim = 10, n_iter = 10, directed = TRUE
 }
 
 # 5. tdmm simulation -----
+#   - run tdd-sbm simulation (once) ----
 
-setwd("mixed_model_implementation_python") # assume starting from tdsbm_supplementary_material directory
+tdmm_results_30 = lapply(1:length(K_set), function(i) {
+    #setwd("mixed_model_implementation_python") # assume starting from tdsbm_supplementary_material directory
+    setwd("/Users/jcarlen/Documents/tdsbm_supplementary_material/mixed_model_implementation_python")
+    N = 30
+    K = K_set[i]
+    print(K)
+    omega = omega_list[[i]]
+    print(omega[,,1])
+    block_omega = omega*N^2/K^2 #agrees with tdd case with equal blocks
+    #mixed_role_options = mixed_role_options_list[[i]]
+    roles_mixed = matrix(sample(1:5, size = N*K, replace = TRUE), ncol = K)
+    roles_mixed = sweep(roles_mixed, 2, apply(roles_mixed, 2, min), "-") #better
+    roles_mixed = sweep(roles_mixed, 2, colSums(roles_mixed), "/")
+    simulate_tdmm(roles_mixed, block_omega, 
+                  n_sim = 2, #N_sim,
+                  n_iter = 2, #N_iter, 
+                  directed = TRUE, verbose = FALSE)
+    setwd("/Users/jcarlen/Documents/tdsbm_supplementary_material")
+    #setwd("..")
+})
 
-i = 1
-N = N_set[1]
-K = K_set[i]
-omega = omega_list[[i]]
-block_omega = omega*N^2/K^2 #these weights should align it with degree corrected example our cases (equally frequent roles)
-roles_mixed = matrix(sample(1:5, size = N*K, replace = TRUE), ncol = K)
-roles_mixed = sweep(roles_mixed, 2, apply(roles_mixed, 2, min), "-") #better
-roles_mixed = sweep(roles_mixed, 2, colSums(roles_mixed), "/")
-
-#mixed_role_options = mixed_role_options_list[[i]]
-
-simulate_tdmm(mixed_roles, block_omega, n_sim = N_sim, 
-              n_iter = 5, #N_iter, 
-              directed = TRUE, verbose = FALSE) {
-  
-setwd("..")
+tdmm_table_30 = data.frame(expand.grid(K = K_set, N = N_set[1]))
   
 #tdmm_vs_tdd_sbm_ll = tdmm_sbm_ll - tdd_sbm_ll #(scale by difference in parameters?)
 
