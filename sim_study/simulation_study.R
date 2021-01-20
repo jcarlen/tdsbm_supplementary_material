@@ -370,14 +370,26 @@ simulate_tdd <- function(roles, omega, theta = NULL,
       # omegas 
       ppsbm_omega = exp(array(ppsbm_K$"logintensities.ql", dim = c(K, K, Time)))
       ppsbm_block_omega = ppsbm_omega*array(table(ppsbm_roles_K) %*% t(table(ppsbm_roles_K)), dim = c(K, K, Time))
+      # reorder if needed to compare omega against true 
+      block_order = permutations(K, K)[which.min(apply(permutations(K, K), 1, 
+                                          function(x) {mean(abs(ppsbm_block_omega[x,x,] - block_omega))})),]
+      ppsbm_block_omega_ordered = array(sapply(1:Time, 
+                                          function(i) {ppsbm_block_omega[block_order,block_order,i]}), dim = c(K, K, Time))
       tdd_sbm_mape[s] = mean(abs(ppsbm_block_omega_ordered - block_omega)/(block_omega))
       
-      # compare likelihood for true vs. fit parameters for simulated data
-      # reorder if needed to compare omega against true 
-      block_order = permutations(K, K)[which.min(apply(permutations(K, K), 1, function(x) {sum(abs(x[ppsbm_roles_K] - roles)) })),]
-      ppsbm_block_omega_ordered = array(sapply(1:Time, function(i) {ppsbm_block_omega[block_order,block_order,i]}), dim = c(K, K, Time))
+      if (verbose) {
+        par(mfrow = c(K+1,K)); par(mai = rep(.6,4))
+        for (i in 1:K) {
+          for (j in 1:K) { #omega comparison
+            plot(ppsbm_block_omega_ordered[i,j,], type = "l", 
+               ylim = c(0,max(c(ppsbm_block_omega_ordered[i,j,], block_omega[i,j,]))))
+            points(block_omega[i,j,], col = "red", type = "l")
+          }
+        }
+      }
       
-      # use selfEdges FALSE since ppsbm fits without them? (but then adjust tdd_sbm block omega?)
+      # compare likelihood for true vs. fit parameters for simulated data
+      #   use selfEdges FALSE since ppsbm fits without them? (but then adjust tdd_sbm block omega?)
       tdd_sbm_sim[s] = tdd_sbm_llik(sim_discrete_edge_array, roles = roles - 1, omega = block_omega, degreeCorrect = dc_sim, directed = TRUE, selfEdges = TRUE) #roles should be 0-indexed
       tdd_sbm_fit[s] = tdd_sbm_llik(sim_discrete_edge_array, roles = ppsbm_roles_K - 1, omega = ppsbm_block_omega, degreeCorrect = 0, directed = TRUE, selfEdges = TRUE)
     }
@@ -441,7 +453,7 @@ tdd_results_90 = apply(tdd_table_90, 1, function(x) {
   omega = omega_list[as.character(K)][[1]]
   dc_fctrs = generate_theta(roles, dc_levels = c(1:5)) #<- note: can alter degree correction levels by changing this specification. E.g. 1:2 would give only two levels of degree heterogeneity
   results = simulate_tdd(roles, omega, dc_fctrs, sim_method = x[['sim_method']], fit_method = x[['fit_method']],
-                         n_sim = N_sim, verbose = FALSE)
+                         n_sim = N_sim, n_ppsbm_k = 1, verbose = FALSE)
   return(results)
 })
 #saveRDS(tdd_results_90, "sim_study/output/tdd_results_90.RDS")
@@ -503,6 +515,7 @@ print(xtable(tdd_tables[[2]]), include.rownames = FALSE)
 #     ppsbm and no degree correction TDD-SBM are similar
 #     With data from TDD-SBM (with degree correction), PPSBM estimation wants to make a separate block for each degree-correction level (but note the LLIK_sim and LLIK_diff results use the true K)
 #     Bike example (separate script) shows how degree correction in model -> group stations with similar behavior across activity levels
+#     tdd-sbm faster than ppsbm but ppsbm is doing additional things like partition selection
 # ---------------------------------------------------------------------------------------------------------------
 # 4. tdmm-sbm 
 #    - tdmm-sbm sim function ----
