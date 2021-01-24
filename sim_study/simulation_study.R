@@ -248,7 +248,7 @@ generate_theta(roles, dc_levels = c(1,2,3))
 simulate_tdd <- function(roles, omega, theta = NULL, 
                          sim_method = c("tdd-sbm-0", "tdd-sbm-3")[1], 
                          fit_method = c("tdd-sbm-0", "tdd-sbm-3", "ppsbm")[1], 
-                         n_sim = 10, n_ppsbm_k = N_ppsbm_K, directed = TRUE, 
+                         n_sim = 10, n_ppsbm_k = 1, directed = TRUE, 
                          n_iter = N_iter, min_k = 1, max_k = 4, verbose = FALSE) {
   
   # checks ----
@@ -438,7 +438,7 @@ tdd_results_30 = apply(tdd_table_30, 1, function(x) {
   omega = omega_list[as.character(K)][[1]]
   dc_fctrs = generate_theta(roles, dc_levels = c(1:5)) #<- note: can alter degree correction levels by changing this specification. E.g. 1:2 would give only two levels of degree heterogeneity
   results = simulate_tdd(roles, omega, dc_fctrs, sim_method = x[['sim_method']], fit_method = x[['fit_method']],
-                          n_sim = N_sim, n_ppsbm_k = 1, verbose = FALSE)
+                          n_sim = N_sim, n_ppsbm_k = N_ppsbm_K, verbose = FALSE)
    return(results)
 })
 #saveRDS(tdd_results_30, "sim_study/output/tdd_results_30.RDS")
@@ -453,7 +453,7 @@ tdd_results_90 = apply(tdd_table_90, 1, function(x) {
   omega = omega_list[as.character(K)][[1]]
   dc_fctrs = generate_theta(roles, dc_levels = c(1:5)) #<- note: can alter degree correction levels by changing this specification. E.g. 1:2 would give only two levels of degree heterogeneity
   results = simulate_tdd(roles, omega, dc_fctrs, sim_method = x[['sim_method']], fit_method = x[['fit_method']],
-                         n_sim = N_sim, n_ppsbm_k = 1, verbose = FALSE)
+                         n_sim = N_sim, n_ppsbm_k = N_ppsbm_K, verbose = FALSE)
   return(results)
 })
 #saveRDS(tdd_results_90, "sim_study/output/tdd_results_90.RDS")
@@ -462,6 +462,12 @@ tdd_results_90 = apply(tdd_table_90, 1, function(x) {
 
 tdd_results_30 = readRDS("sim_study/output/tdd_results_30.RDS")
 tdd_results_90 = readRDS("sim_study/output/tdd_results_90.RDS")
+
+tdd_table_30 = data.frame(expand.grid(K = K_set, N = N_set[1], sim_method = c("tdd-sbm-0", "tdd-sbm-3"), 
+                                      fit_method = c("tdd-sbm-0", "tdd-sbm-3", "ppsbm")))
+
+tdd_table_90 = data.frame(expand.grid(K = K_set, N = N_set[2], sim_method = c("tdd-sbm-0", "tdd-sbm-3"), 
+                                      fit_method = c("tdd-sbm-0", "tdd-sbm-3", "ppsbm")))
 
 tdd_results = list(list(results = tdd_results_30, table = tdd_table_30), 
                    list(results = tdd_results_90, table = tdd_table_90))
@@ -488,8 +494,8 @@ tdd_tables = lapply(tdd_results, function(x) {
   tdd_table$N = as.character(tdd_table$N) #for print formatting
   tdd_table$ARI = paste0(round(sapply(tdd_results_mean, "[[", "tdd_sbm_ari"), 2), " (", round(sapply(tdd_results_sd, "[[", "tdd_sbm_ari"), 2), ")")
   tdd_table$MAPE = paste0(round(sapply(tdd_results_mean, "[[", "tdd_sbm_mape"), 2), " (", round(sapply(tdd_results_sd, "[[", "tdd_sbm_mape"), 2), ")")
-  tdd_table$LLIK_sim = paste0(round(sapply(tdd_results_mean, "[[", "tdd_sbm_sim")), " (", round(sapply(tdd_results_sd, "[[", "tdd_sbm_sim"), 1), ")")
-  tdd_table$LLIK_diff = paste0(round(sapply(tdd_results_mean, "[[", "tdd_sim_vs_fit_method")), " (", round(sapply(tdd_results_sd, "[[", "tdd_sim_vs_fit_method"), 1), ")")
+  tdd_table$LLIK_sim = paste0(round(sapply(tdd_results_mean, "[[", "tdd_sbm_sim")), " (", round(sapply(tdd_results_sd, "[[", "tdd_sbm_sim"), 0), ")")
+  tdd_table$LLIK_diff = paste0(round(sapply(tdd_results_mean, "[[", "tdd_sim_vs_fit_method")), " (", round(sapply(tdd_results_sd, "[[", "tdd_sim_vs_fit_method"), 0), ")")
   tdd_table$`Est K (PPSBM)` = paste0(round(sapply(tdd_results_mean, "[[", "tdd_sbm_est_K")))
   tdd_table$`Est K (PPSBM)` = gsub(tdd_table$`Est K (PPSBM)`, pattern = "NA", replacement = "-")
 
@@ -583,9 +589,11 @@ simulate_tdmm <- function(roles, omega, n_sim = 10, n_iter = 10, directed = TRUE
    
    # visualize results?
    if (verbose) {
-     par(mfrow = c(K+1,K)); par(mai = rep(.6,4))
+     par(mfrow = c(K+1,K)); par(mai = c(.3,.4,.3,.3))
      for (i in 1:K^2) { #omega comparison
-       plot(as.numeric(tdmm_sbm_omega[i,]), type = "l", ylim = c(0,max(c(max(tdmm_sbm_omega), max(omega_ordered)))))
+       plot(as.numeric(tdmm_sbm_omega[i,]), type = "l", 
+            ylim = c(0,max(c(max(tdmm_sbm_omega), max(omega_ordered)))),
+            ylab = "omega_gh", xlab = "time")
        points(apply(omega_ordered, 3, dplyr::nth, i), col = "red", type = "l")
      }
      # mixed role comparison
@@ -593,11 +601,14 @@ simulate_tdmm <- function(roles, omega, n_sim = 10, n_iter = 10, directed = TRUE
      plot((roles[,block_order])[,axes], 
           xlim = c(0,max(cbind(roles, tdmm_sbm_roles))), 
           ylim = c(0,max(cbind(roles, tdmm_sbm_roles))),
-          main = "Red = TRUE", type = "n")
+          main = "Red = TRUE", type = "n",
+          ylab = "", xlab = "")
      text((roles[,block_order])[,axes], as.character(1:N), col = "red")  
      text(tdmm_sbm_roles[,axes], as.character(1:N), col = "black") 
      # overall activity pattern comparison
-     plot(colSums(apply(omega, 3, unlist)), type = "l"); points(colSums(tdmm_sbm_omega), col = "red", type = "l")
+     plot(colSums(apply(omega, 3, unlist)), type = "l", main = "Total",
+          ylab = "omega total", xlab = "time") 
+     points(colSums(tdmm_sbm_omega), col = "red", type = "l")
    
      #compare data matrix reconstruction
      # mean(sim_mixed_edge_array[,,1] - as.matrix(tdmm_sbm_roles) %*% tdmm_sbm_omega_array[,,1] %*% t(as.matrix(tdmm_sbm_roles)))
@@ -633,7 +644,9 @@ simulate_tdmm <- function(roles, omega, n_sim = 10, n_iter = 10, directed = TRUE
     # compare likelihood of data under fit vs. true model used to simulate the data
     tdmm_sbm_sim = tdmm_sbm_sim,
     tdmm_sbm_fit = tdmm_sbm_fit,
+    tdmm_sim_vs_fit = tdmm_sbm_fit - tdmm_sbm_sim,
     tdmm_discrete_fit = tdmm_discrete_fit,
+    tdmm_fit_vs_discrete_fit = tdmm_discrete_fit - tdmm_sbm_fit,
     fit_time = fit_time
   )
   
@@ -656,17 +669,58 @@ tdmm_results_30 = lapply(1:length(K_set), function(i) {
     roles_mixed = sweep(roles_mixed, 2, apply(roles_mixed, 2, min), "-") #better
     roles_mixed = sweep(roles_mixed, 2, colSums(roles_mixed), "/")
     result = simulate_tdmm(roles_mixed, block_omega, 
-                  n_sim = 1, #N_sim,
+                  n_sim = 2, #N_sim,
                   n_iter = 2, #N_iter, 
-                  directed = TRUE, verbose = TRUE)
+                  directed = TRUE, verbose = FALSE)
     setwd("/Users/jcarlen/Documents/tdsbm_supplementary_material")
     #setwd("..")
     return(result)
 })
 
 tdmm_table_30 = data.frame(expand.grid(K = K_set, N = N_set[1]))
-  
-#tdmm_vs_tdd_sbm_ll = tdmm_sbm_ll - tdd_sbm_ll #(scale by difference in parameters?)
 
-#potential identifiability issues
+tdmm_results = list(list(results = tdmm_results_30, table = tdmm_table_30)#, 
+                   #list(results = tdd_results_90, table = tdd_table_90)
+                   )
+
+tdmm_tables = lapply(tdmm_results, function(x) {
+  
+  tdmm_table = x$table
+  tdmm_result = x$results
+  
+  # Add results to summary table
+  
+  tdmm_results_mean = lapply(tdmm_result, function(x) {sapply(x, mean, na.rm = TRUE)})
+  tdmm_results_sd = lapply(tdmm_result, function(x) {sapply(x, sd, na.rm = TRUE)})
+  
+  tdmm_table$K = as.character(tdmm_table$K) #for print formatting
+  tdmm_table$N = as.character(tdmm_table$N) #for print formatting
+  tdmm_table$MARE = paste0(round(sapply(tdmm_results_mean, "[[", "tdmm_sbm_mare"), 2), 
+                           " (", round(sapply(tdmm_results_sd, "[[", "tdmm_sbm_mare"), 2), ")")
+  tdmm_table$MAPE = paste0(round(sapply(tdmm_results_mean, "[[", "tdmm_sbm_mape"), 2), 
+                           " (", round(sapply(tdmm_results_sd, "[[", "tdmm_sbm_mape"), 2), ")")
+  tdmm_table$LLIK_sim = paste0(round(sapply(tdmm_results_mean, "[[", "tdmm_sbm_sim")), 
+                               " (", round(sapply(tdmm_results_sd, "[[", "tdmm_sbm_sim"), 0), ")")
+  tdmm_table$LLIK_fit = paste0(round(sapply(tdmm_results_mean, "[[", "tdmm_sbm_fit")), 
+                               " (", round(sapply(tdmm_results_sd, "[[", "tdmm_sbm_fit"), 0), ")")
+  tdmm_table$LLIK_diff = paste0(round(sapply(tdmm_results_mean, "[[", "tdmm_sim_vs_fit")), 
+                                " (", round(sapply(tdmm_results_sd, "[[", "tdmm_sim_vs_fit"), 0), ")")
+  tdmm_table$LLIK_discrete = paste0(round(sapply(tdmm_results_mean, "[[", "tdmm_discrete_fit")), 
+                                " (", round(sapply(tdmm_results_sd, "[[", "tdmm_discrete_fit"), 0), ")")
+  tdmm_table$LLIK_diff_discrete = paste0(round(sapply(tdmm_results_mean, "[[", "tdmm_fit_vs_discrete_fit")), 
+                                " (", round(sapply(tdmm_results_sd, "[[", "tdmm_fit_vs_discrete_fit"), 0), ")")
+
+  #timing (exclude variable selection runs)
+  mean_time = round(sapply(tdmm_result, function(x) {mean(x$fit_time[is.na(x$tdmm_sbm_est_K)])}), 2)
+  sd_time = round(sapply(tdmm_result, function(x) {sd(x$fit_time[is.na(x$tdmm_sbm_est_K)])}), 2)
+  tdmm_table$`Time (s)` = paste0(mean_time, " (", sd_time, ")")
+  
+  tdmm_table = tdmm_table[,c("K", "N", "MARE", "MAPE", "LLIK_sim", "LLIK_diff", "LLIK_diff_discrete")]
+  
+  return(xtable(tdmm_table))
+})
+
+#potential identifiability issues!!
+
+
 
