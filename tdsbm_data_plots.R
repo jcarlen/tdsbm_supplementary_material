@@ -1647,9 +1647,15 @@ ggsave(filename = "IMG/ny_static_discrete.png", plot_ny_static)
 
 #     run the models without degree correction (just LA and SF for now, NY is slow) ####
 
+# run 
 la2.0 = sbmt(la_byhour,  degreeCorrect = 0, directed = T, klPerNetwork = 50, maxComms = 2, seed = 1)
 sf2.0 = sbmt(sf_byhour,  degreeCorrect = 0, directed = T, klPerNetwork = 50, maxComms = 2, seed = 1)
 #ny2.0 = sbmt(ny_byhour,  degreeCorrect = 0, directed = T, klPerNetwork = 1, maxComms = 2, seed = 1)
+
+# save
+saveRDS(la2.0, "discrete_model_results/la2_0.RDS")
+saveRDS(sf2.0, "discrete_model_results/sf2_0.RDS")
+#saveRDS(ny2.0, "discrete_model_results/ny2_0.RDS")
 
 la.noDC = left_join(la.station, data.frame(id =  names(la2.0$FoundComms), 
                                              block  =  as.factor((la2.0$FoundComms))))
@@ -1663,7 +1669,7 @@ sf.noDC = left_join(sf.station, data.frame(id =  as.integer(names(sf2.0$FoundCom
 
 plot_la_noDC = ggmap(la_background) +
   geom_point(data=la.noDC, shape = 21, aes(x=lon, y=lat, fill = block, size = degree), alpha = .7) +
-  ggtitle("Los Angeles, Discrete no Degree Correction") +
+  ggtitle("Los Angeles, Discrete, No Deg. Correction") +
   scale_fill_manual(values = c("black", "white")) +
   #scale_size(guide = "none") +
   theme_classic() + theme(plot.title = element_text(hjust = 0.5)) +
@@ -1678,12 +1684,12 @@ plot_la_noDC = ggmap(la_background) +
         axis.line.y = element_blank())
 plot_la_noDC
 
-ggsave(filename = "IMG/la_noDC.png", plot_la_noDC)
+ggsave(filename = "IMG/la_noDC_discrete.png", plot_la_noDC)
 
 #       SF ----
 plot_sf_noDC = ggmap(sf_background) +
   geom_point(data=sf.noDC, shape = 21, aes(x=lon, y=lat, fill = block, size = degree), alpha = .7) +
-  ggtitle("San Francisco, Discrete no Degree Correction") +
+  ggtitle("San Francisco, Discrete, No Deg. Correction") +
   scale_fill_manual(values = c("black", "white")) +
   #scale_size(guide = "none") +
   theme_classic() + theme(plot.title = element_text(hjust = 0.5)) +
@@ -1698,33 +1704,11 @@ plot_sf_noDC = ggmap(sf_background) +
         axis.line.y = element_blank())
 plot_sf_noDC
 
+ggsave(filename = "IMG/sf_noDC_discrete.png", plot_la_noDC)
+
 #       NY ----
 
-# plot_ny_noDC = ggmap(ny_background) +
-#   geom_point(data = ny.noDC, aes(x = lon, y = lat, color = block, fill = block,
-#                                    shape = block, size = degree), color = "black", alpha = .7) +
-#   ggtitle("New York, Discrete without Degree Correction") +
-#   xlim(-74.02,-73.93) + ylim(40.65, 40.8) +
-#   theme_classic() + theme(plot.title = element_text(hjust = 0.5)) +
-#   guides(size = guide_legend(order = 2)) +
-#   scale_fill_manual(name = "role", 
-#                     #labels = c("Brooklyn", "Manhattan (home)", "Manhattan (work)"), 
-#                     values = c("white", "gray", "black"), guide = guide_legend(order = 1)) + 
-#   scale_shape_manual(name = "role", 
-#                      #labels = c("Brooklyn", "Manhattan (home)", "Manhattan (work)"), 
-#                      values = c(24, 22, 21), guide = guide_legend(order = 1)) +
-#   scale_size(range = c(1,4)) +
-#   #xlab("longitude") + ylab("latitude")
-#   theme(plot.title = element_text(hjust = 0.5),
-#         axis.title.x = element_blank(),
-#         axis.text.x = element_blank(),
-#         axis.ticks.x = element_blank(),
-#         axis.line.x = element_blank(),
-#         axis.title.y = element_blank(),
-#         axis.text.y = element_blank(),
-#         axis.ticks.y =element_blank(),
-#         axis.line.y = element_blank())
-# plot_ny_noDC
+##
 
 #     Final plots ----
 
