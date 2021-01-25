@@ -547,7 +547,7 @@ simulate_tdmm <- function(roles, omega, n_sim = 10, n_iter = 10, directed = TRUE
   Time = dim(omega)[3]
   
   # initialize output vectors ----
-  tdmm_sbm_mare = 1:n_sim #sum of abs error averaged over number of blocks (since columns are sum-1 normalized)
+  tdmm_sbm_bae = 1:n_sim #sum of abs error averaged over number of blocks (since columns are sum-1 normalized)
   tdmm_sbm_mape = 1:n_sim
   tdmm_sbm_sim =1:n_sim
   tdmm_sbm_fit =1:n_sim
@@ -580,7 +580,7 @@ simulate_tdmm <- function(roles, omega, n_sim = 10, n_iter = 10, directed = TRUE
    
    # store result metrics
    
-   tdmm_sbm_mare[s] = sum(abs(roles[,block_order] - tdmm_sbm_roles))/K 
+   tdmm_sbm_bae[s] = mean(colSums(abs(roles[,block_order] - tdmm_sbm_roles)))
    tdmm_sbm_mape[s] = mean(abs(tdmm_sbm_omega_array - omega_ordered)/omega_ordered) #+1)??
    # llik of sim data under true model
    tdmm_sbm_sim[s] = tdmm_sbm_llik(A = sim_mixed_edge_array, C = roles, omega = omega, selfEdges = TRUE, directed = TRUE)
@@ -629,6 +629,7 @@ simulate_tdmm <- function(roles, omega, n_sim = 10, n_iter = 10, directed = TRUE
    
    # evaluate results from discrete fit
    tdd_roles = matrix(0, N, K); rownames(tdd_roles) = 1:N
+   #replace block assignment with degree-corrected value
    for (i in 1:N) { tdd_roles[i, tdd_sbm$FoundComms[i]+1] = tdd_sbm$theta[i] }
 
    # evaluate likelihood of mixed edge array using params found by discrete model
@@ -638,7 +639,7 @@ simulate_tdmm <- function(roles, omega, n_sim = 10, n_iter = 10, directed = TRUE
   # results ----
   results = data.frame(
     # role detection
-    tdmm_sbm_mare = tdmm_sbm_mare,
+    tdmm_sbm_bae = tdmm_sbm_bae,
     # block-to-block activity detection
     tdmm_sbm_mape = tdmm_sbm_mape,
     # compare likelihood of data under fit vs. true model used to simulate the data
@@ -665,13 +666,13 @@ tdmm_results_30 = lapply(1:length(K_set), function(i) {
     omega = omega_list[[i]]
     block_omega = omega*N^2/K^2 #agrees with tdd case with equal blocks
     #mixed_role_options = mixed_role_options_list[[i]]
-    roles_mixed = matrix(sample(1:5, size = N*K, replace = TRUE), ncol = K)
-    roles_mixed = sweep(roles_mixed, 2, apply(roles_mixed, 2, min), "-") #better
+    roles_mixed = matrix(sample(0:5, size = N*K, replace = TRUE), ncol = K)
+    #roles_mixed = sweep(roles_mixed, 2, apply(roles_mixed, 2, min), "-") #better if sample min >0
     roles_mixed = sweep(roles_mixed, 2, colSums(roles_mixed), "/")
     result = simulate_tdmm(roles_mixed, block_omega, 
-                  n_sim = 2, #N_sim,
-                  n_iter = 2, #N_iter, 
-                  directed = TRUE, verbose = FALSE)
+                  n_sim = N_sim,
+                  n_iter = N_iter,
+                  directed = TRUE, verbose = TRUE)
     setwd("/Users/jcarlen/Documents/tdsbm_supplementary_material")
     #setwd("..")
     return(result)
@@ -695,8 +696,8 @@ tdmm_tables = lapply(tdmm_results, function(x) {
   
   tdmm_table$K = as.character(tdmm_table$K) #for print formatting
   tdmm_table$N = as.character(tdmm_table$N) #for print formatting
-  tdmm_table$MARE = paste0(round(sapply(tdmm_results_mean, "[[", "tdmm_sbm_mare"), 2), 
-                           " (", round(sapply(tdmm_results_sd, "[[", "tdmm_sbm_mare"), 2), ")")
+  tdmm_table$BAE = paste0(round(sapply(tdmm_results_mean, "[[", "tdmm_sbm_bae"), 2), 
+                           " (", round(sapply(tdmm_results_sd, "[[", "tdmm_sbm_bae"), 2), ")")
   tdmm_table$MAPE = paste0(round(sapply(tdmm_results_mean, "[[", "tdmm_sbm_mape"), 2), 
                            " (", round(sapply(tdmm_results_sd, "[[", "tdmm_sbm_mape"), 2), ")")
   tdmm_table$LLIK_sim = paste0(round(sapply(tdmm_results_mean, "[[", "tdmm_sbm_sim")), 
@@ -715,10 +716,17 @@ tdmm_tables = lapply(tdmm_results, function(x) {
   sd_time = round(sapply(tdmm_result, function(x) {sd(x$fit_time[is.na(x$tdmm_sbm_est_K)])}), 2)
   tdmm_table$`Time (s)` = paste0(mean_time, " (", sd_time, ")")
   
-  tdmm_table = tdmm_table[,c("K", "N", "MARE", "MAPE", "LLIK_sim", "LLIK_diff", "LLIK_diff_discrete")]
+  tdmm_table = tdmm_table[,c("K", "N", "BAE", "MAPE", "LLIK_sim", "LLIK_diff", "LLIK_diff_discrete")]
   
   return(xtable(tdmm_table))
 })
+
+
+# 30 nodes
+print(xtable(tdmm_tables[[1]]), include.rownames = FALSE)
+
+# 90 nodes
+# print(xtable(tdmm_tables[[2]]), include.rownames = FALSE)
 
 #potential identifiability issues!!
 
