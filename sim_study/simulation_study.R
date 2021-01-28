@@ -19,6 +19,8 @@ library(fossil) #for adj rand index -- requires less manipulation of our output 
 library(gtools) #for permutations
 library(xtable)
 
+# run mode (recreate or load save data?) ----
+run_mode = FALSE
 # generate_multilayer_array function ----
 
 #' generate N x N x Time array (Time-sliced adjacency matrices) based on TDD-SBM (type == "discrete) or TDMM-SBM (type = "mixed") model
@@ -268,8 +270,8 @@ simulate_tdd <- function(roles, omega, theta = NULL,
   # initialize output ----
   tdd_sbm_ari = 1:n_sim
   tdd_sbm_mape = 1:n_sim
-  tdd_sbm_sim = 1:n_sim
-  tdd_sbm_fit = 1:n_sim
+  tdd_sbm_sim_llik = 1:n_sim
+  tdd_sbm_fit_llik = 1:n_sim
   tdd_sbm_est_K = rep(NA, n_sim) #only filled in for ppsbm
   fit_time = 1:n_sim #only filled in for ppsbm
   
@@ -315,8 +317,8 @@ simulate_tdd <- function(roles, omega, theta = NULL,
         tdd_sbm_mape[s] = mean(abs(tdd_sbm_omega_ordered - block_omega)/block_omega)
         
         # compare likelihood for true vs. fit parameters for simulated data
-        tdd_sbm_sim[s] = tdd_sbm_llik(sim_discrete_edge_array, roles = roles - 1, omega = block_omega, degreeCorrect = dc_sim, directed = TRUE, selfEdges = TRUE)
-        tdd_sbm_fit[s] = tdd_sbm_llik(sim_discrete_edge_array, roles = tdd_sbm$FoundComms, omega = tdd_sbm$EdgeMatrix, degreeCorrect = dc_fit, directed = TRUE, selfEdges = TRUE)
+        tdd_sbm_sim_llik[s] = tdd_sbm_llik(sim_discrete_edge_array, roles = roles - 1, omega = block_omega, degreeCorrect = dc_sim, directed = TRUE, selfEdges = TRUE)
+        tdd_sbm_fit_llik[s] = tdd_sbm_llik(sim_discrete_edge_array, roles = tdd_sbm$FoundComms, omega = tdd_sbm$EdgeMatrix, degreeCorrect = dc_fit, directed = TRUE, selfEdges = TRUE) #can check against tdd_sbm$llik when possible
     }
     
     # fit by ppsbm
@@ -390,8 +392,8 @@ simulate_tdd <- function(roles, omega, theta = NULL,
       
       # compare likelihood for true vs. fit parameters for simulated data
       #   use selfEdges FALSE since ppsbm fits without them? (but then adjust tdd_sbm block omega?)
-      tdd_sbm_sim[s] = tdd_sbm_llik(sim_discrete_edge_array, roles = roles - 1, omega = block_omega, degreeCorrect = dc_sim, directed = TRUE, selfEdges = TRUE) #roles should be 0-indexed
-      tdd_sbm_fit[s] = tdd_sbm_llik(sim_discrete_edge_array, roles = ppsbm_roles_K - 1, omega = ppsbm_block_omega, degreeCorrect = 0, directed = TRUE, selfEdges = TRUE)
+      tdd_sbm_sim_llik[s] = tdd_sbm_llik(sim_discrete_edge_array, roles = roles - 1, omega = block_omega, degreeCorrect = dc_sim, directed = TRUE, selfEdges = TRUE) #roles should be 0-indexed
+      tdd_sbm_fit_llik[s] = tdd_sbm_llik(sim_discrete_edge_array, roles = ppsbm_roles_K - 1, omega = ppsbm_block_omega, degreeCorrect = 0, directed = TRUE, selfEdges = TRUE)
     }
     
   }
@@ -403,9 +405,9 @@ simulate_tdd <- function(roles, omega, theta = NULL,
     # blcok-to-block activity detection
     tdd_sbm_mape = tdd_sbm_mape,
     # compare likelihood of data under fit vs. true model used to simulate the data
-    tdd_sbm_sim = tdd_sbm_sim,
-    tdd_sbm_fit = tdd_sbm_fit,
-    tdd_sim_vs_fit_method = tdd_sbm_fit - tdd_sbm_sim,
+    tdd_sbm_sim_llik = tdd_sbm_sim_llik,
+    tdd_sbm_fit_llik = tdd_sbm_fit_llik,
+    tdd_sim_vs_fit_method = tdd_sbm_fit_llik - tdd_sbm_sim_llik,
     tdd_sbm_est_K = tdd_sbm_est_K,
     fit_time = fit_time
   )
@@ -426,12 +428,12 @@ simulate_tdd <- function(roles, omega, theta = NULL,
   # results33 = simulate_tdd(roles, omega = omega_2, theta = dc_fctrs, sim_method = "tdd-sbm-3", fit_method = "tdd-sbm-3")
 
 # 3. tdd simulation ----
-#    - run tdd-sbm simulation (once)----
+#    - run tdd-sbm simulation (if run_mode = TRUE) ----
 
 tdd_table_30 = data.frame(expand.grid(K = K_set, N = N_set[1], sim_method = c("tdd-sbm-0", "tdd-sbm-3"), 
                                         fit_method = c("tdd-sbm-0", "tdd-sbm-3", "ppsbm")))
-  
-tdd_results_30 = apply(tdd_table_30, 1, function(x) {
+if (run_mode = TRUE) {
+ tdd_results_30 = apply(tdd_table_30[3,], 1, function(x) {
   cat("running for parameters:", x,"\n")
   K = as.numeric(x['K'])
   roles = generate_roles(N = as.numeric(x['N']), role_types = K, type = "discrete", rel_freq = rep(1, K)) #<- note: can alter relative role frequency by changing this specification. E.g. 1:K would give increasing frequency to higher-numbered roles.
@@ -441,12 +443,13 @@ tdd_results_30 = apply(tdd_table_30, 1, function(x) {
                           n_sim = N_sim, n_ppsbm_k = N_ppsbm_K, verbose = FALSE)
    return(results)
 })
-#saveRDS(tdd_results_30, "sim_study/output/tdd_results_30.RDS")
+ saveRDS(tdd_results_30, "sim_study/output/tdd_results_30.RDS")
+}
 
 tdd_table_90 = data.frame(expand.grid(K = K_set, N = N_set[2], sim_method = c("tdd-sbm-0", "tdd-sbm-3"), 
                                        fit_method = c("tdd-sbm-0", "tdd-sbm-3", "ppsbm")))
-
-tdd_results_90 = apply(tdd_table_90, 1, function(x) {
+if (run_mode = TRUE) {
+  tdd_results_90 = apply(tdd_table_90, 1, function(x) {
   cat("running for parameters:", x,"\n")
   K = as.numeric(x['K'])
   roles = generate_roles(N = as.numeric(x['N']), role_types = K, type = "discrete", rel_freq = rep(1, K)) #<- note: can alter relative role frequency by changing this specification. E.g. 1:K would give increasing frequency to higher-numbered roles.
@@ -456,7 +459,8 @@ tdd_results_90 = apply(tdd_table_90, 1, function(x) {
                          n_sim = N_sim, n_ppsbm_k = N_ppsbm_K, verbose = FALSE)
   return(results)
 })
-#saveRDS(tdd_results_90, "sim_study/output/tdd_results_90.RDS")
+  saveRDS(tdd_results_90, "sim_study/output/tdd_results_90.RDS")
+}
 
 #    - load saved results and reformat ---- 
 
@@ -494,7 +498,7 @@ tdd_tables = lapply(tdd_results, function(x) {
   tdd_table$N = as.character(tdd_table$N) #for print formatting
   tdd_table$ARI = paste0(round(sapply(tdd_results_mean, "[[", "tdd_sbm_ari"), 2), " (", round(sapply(tdd_results_sd, "[[", "tdd_sbm_ari"), 2), ")")
   tdd_table$MAPE = paste0(round(sapply(tdd_results_mean, "[[", "tdd_sbm_mape"), 2), " (", round(sapply(tdd_results_sd, "[[", "tdd_sbm_mape"), 2), ")")
-  tdd_table$LLIK_sim = paste0(round(sapply(tdd_results_mean, "[[", "tdd_sbm_sim")), " (", round(sapply(tdd_results_sd, "[[", "tdd_sbm_sim"), 0), ")")
+  tdd_table$LLIK_sim = paste0(round(sapply(tdd_results_mean, "[[", "tdd_sbm_sim_llik")), " (", round(sapply(tdd_results_sd, "[[", "tdd_sbm_sim_llik"), 0), ")")
   tdd_table$LLIK_diff = paste0(round(sapply(tdd_results_mean, "[[", "tdd_sim_vs_fit_method")), " (", round(sapply(tdd_results_sd, "[[", "tdd_sim_vs_fit_method"), 0), ")")
   tdd_table$`Est K (PPSBM)` = paste0(round(sapply(tdd_results_mean, "[[", "tdd_sbm_est_K")))
   tdd_table$`Est K (PPSBM)` = gsub(tdd_table$`Est K (PPSBM)`, pattern = "NA", replacement = "-")
@@ -549,9 +553,9 @@ simulate_tdmm <- function(roles, omega, n_sim = 10, n_iter = 10, directed = TRUE
   # initialize output vectors ----
   tdmm_sbm_bae = 1:n_sim #sum of abs error averaged over number of blocks (since columns are sum-1 normalized)
   tdmm_sbm_mape = 1:n_sim
-  tdmm_sbm_sim =1:n_sim
-  tdmm_sbm_fit =1:n_sim
-  tdmm_discrete_fit =1:n_sim
+  tdmm_sbm_sim_llik =1:n_sim
+  tdmm_sbm_fit_llik =1:n_sim
+  tdmm_discrete_fit_llik =1:n_sim
   fit_time = 1:n_sim #only filled in for ppsbm
   # -----------------------------
   # run -----
@@ -583,9 +587,9 @@ simulate_tdmm <- function(roles, omega, n_sim = 10, n_iter = 10, directed = TRUE
    tdmm_sbm_bae[s] = mean(colSums(abs(roles[,block_order] - tdmm_sbm_roles)))
    tdmm_sbm_mape[s] = mean(abs(tdmm_sbm_omega_array - omega_ordered)/omega_ordered) #+1)??
    # llik of sim data under true model
-   tdmm_sbm_sim[s] = tdmm_sbm_llik(A = sim_mixed_edge_array, C = roles, omega = omega, selfEdges = TRUE, directed = TRUE)
+   tdmm_sbm_sim_llik[s] = tdmm_sbm_llik(A = sim_mixed_edge_array, C = roles, omega = omega, selfEdges = TRUE, directed = TRUE)
    # llik of sim data under estimated parameters
-   tdmm_sbm_fit[s] = tdmm_sbm_llik(A = sim_mixed_edge_array, C = tdmm_sbm_roles, omega = tdmm_sbm_omega, selfEdges = TRUE, directed = TRUE)
+   tdmm_sbm_fit_llik[s] = tdmm_sbm_llik(A = sim_mixed_edge_array, C = tdmm_sbm_roles, omega = tdmm_sbm_omega, selfEdges = TRUE, directed = TRUE)
    
    # visualize results?
    if (verbose) {
@@ -633,7 +637,7 @@ simulate_tdmm <- function(roles, omega, n_sim = 10, n_iter = 10, directed = TRUE
    for (i in 1:N) { tdd_roles[i, tdd_sbm$FoundComms[i]+1] = tdd_sbm$theta[i] }
 
    # evaluate likelihood of mixed edge array using params found by discrete model
-   tdmm_discrete_fit[s] = tdmm_sbm_llik(sim_mixed_edge_array, C = tdd_roles, omega = tdd_sbm$EdgeMatrix, selfEdges = TRUE, directed = TRUE)
+   tdmm_discrete_fit_llik[s] = tdd_sbm$llik
   }
 
   # results ----
@@ -643,11 +647,11 @@ simulate_tdmm <- function(roles, omega, n_sim = 10, n_iter = 10, directed = TRUE
     # block-to-block activity detection
     tdmm_sbm_mape = tdmm_sbm_mape,
     # compare likelihood of data under fit vs. true model used to simulate the data
-    tdmm_sbm_sim = tdmm_sbm_sim,
-    tdmm_sbm_fit = tdmm_sbm_fit,
-    tdmm_sim_vs_fit = tdmm_sbm_fit - tdmm_sbm_sim,
-    tdmm_discrete_fit = tdmm_discrete_fit,
-    tdmm_fit_vs_discrete_fit = tdmm_discrete_fit - tdmm_sbm_fit,
+    tdmm_sbm_sim_llik = tdmm_sbm_sim_llik,
+    tdmm_sbm_fit_llik = tdmm_sbm_fit_llik,
+    tdmm_sim_vs_fit = tdmm_sbm_fit_llik - tdmm_sbm_sim_llik,
+    tdmm_discrete_fit_llik = tdmm_discrete_fit_llik,
+    tdmm_fit_vs_discrete_fit = tdmm_discrete_fit_llik - tdmm_sbm_fit_llik,
     fit_time = fit_time
   )
   
@@ -655,12 +659,13 @@ simulate_tdmm <- function(roles, omega, n_sim = 10, n_iter = 10, directed = TRUE
 }
 
 # 5. tdmm simulation -----
-#   - run tdd-sbm simulation (once) ----
+#   - run tdd-sbm simulation(if run_mode = TRUE) ----
 
-tdmm_results_30 = lapply(1:length(K_set), function(i) {
+if (run_mode = TRUE) {
+  tdmm_results_30 = lapply(1:length(K_set), function(i) {
     #setwd("mixed_model_implementation_python") # assume starting from tdsbm_supplementary_material directory
     setwd("/Users/jcarlen/Documents/tdsbm_supplementary_material/mixed_model_implementation_python")
-    N = 30
+    N = N_set[1]
     K = K_set[i]
     print(K)
     omega = omega_list[[i]]
@@ -672,17 +677,49 @@ tdmm_results_30 = lapply(1:length(K_set), function(i) {
     result = simulate_tdmm(roles_mixed, block_omega, 
                   n_sim = N_sim,
                   n_iter = N_iter,
-                  directed = TRUE, verbose = TRUE)
+                  directed = TRUE, verbose = FALSE)
     setwd("/Users/jcarlen/Documents/tdsbm_supplementary_material")
     #setwd("..")
     return(result)
 })
+  saveRDS(tdmm_results_30, "sim_study/output/tdmm_results_30.rds")
+}
+
+if (run_mode = TRUE) {
+  tdmm_results_90 = lapply(1:length(K_set), function(i) {
+    #setwd("mixed_model_implementation_python") # assume starting from tdsbm_supplementary_material directory
+    setwd("/Users/jcarlen/Documents/tdsbm_supplementary_material/mixed_model_implementation_python")
+    N = N_set[2]
+    K = K_set[i]
+    print(K)
+    omega = omega_list[[i]]
+    block_omega = omega*N^2/K^2 #agrees with tdd case with equal blocks
+    #mixed_role_options = mixed_role_options_list[[i]]
+    roles_mixed = matrix(sample(0:5, size = N*K, replace = TRUE), ncol = K)
+    #roles_mixed = sweep(roles_mixed, 2, apply(roles_mixed, 2, min), "-") #better if sample min >0
+    roles_mixed = sweep(roles_mixed, 2, colSums(roles_mixed), "/")
+    result = simulate_tdmm(roles_mixed, block_omega,
+                           n_sim = 3,
+                           n_iter = 3,
+                           directed = TRUE, verbose = FALSE)
+    setwd("/Users/jcarlen/Documents/tdsbm_supplementary_material")
+    #setwd("..")
+    return(result)
+  }) #takes a few minutes
+  saveRDS(tdmm_results_90, "sim_study/output/tdmm_results_90.rds")
+}
+
+#   - load saved results and reformat ----
+tdmm_results_30 = readRDS("sim_study/output/tdmm_results_30.rds")
 
 tdmm_table_30 = data.frame(expand.grid(K = K_set, N = N_set[1]))
 
-tdmm_results = list(list(results = tdmm_results_30, table = tdmm_table_30)#, 
-                   #list(results = tdd_results_90, table = tdd_table_90)
-                   )
+tdmm_results_90 = readRDS("sim_study/output/tdmm_results_90.rds")
+
+tdmm_table_90 = data.frame(expand.grid(K = K_set, N = N_set[2]))
+
+tdmm_results = list(list(results = tdmm_results_30, table = tdmm_table_30), 
+                   list(results = tdmm_results_90, table = tdmm_table_90))
 
 tdmm_tables = lapply(tdmm_results, function(x) {
   
@@ -700,14 +737,14 @@ tdmm_tables = lapply(tdmm_results, function(x) {
                            " (", round(sapply(tdmm_results_sd, "[[", "tdmm_sbm_bae"), 2), ")")
   tdmm_table$MAPE = paste0(round(sapply(tdmm_results_mean, "[[", "tdmm_sbm_mape"), 2), 
                            " (", round(sapply(tdmm_results_sd, "[[", "tdmm_sbm_mape"), 2), ")")
-  tdmm_table$LLIK_sim = paste0(round(sapply(tdmm_results_mean, "[[", "tdmm_sbm_sim")), 
-                               " (", round(sapply(tdmm_results_sd, "[[", "tdmm_sbm_sim"), 0), ")")
-  tdmm_table$LLIK_fit = paste0(round(sapply(tdmm_results_mean, "[[", "tdmm_sbm_fit")), 
-                               " (", round(sapply(tdmm_results_sd, "[[", "tdmm_sbm_fit"), 0), ")")
+  tdmm_table$LLIK_sim = paste0(round(sapply(tdmm_results_mean, "[[", "tdmm_sbm_sim_llik")), 
+                               " (", round(sapply(tdmm_results_sd, "[[", "tdmm_sbm_sim_llik"), 0), ")")
+  tdmm_table$LLIK_fit = paste0(round(sapply(tdmm_results_mean, "[[", "tdmm_sbm_fit_llik")), 
+                               " (", round(sapply(tdmm_results_sd, "[[", "tdmm_sbm_fit_llik"), 0), ")")
   tdmm_table$LLIK_diff = paste0(round(sapply(tdmm_results_mean, "[[", "tdmm_sim_vs_fit")), 
                                 " (", round(sapply(tdmm_results_sd, "[[", "tdmm_sim_vs_fit"), 0), ")")
-  tdmm_table$LLIK_discrete = paste0(round(sapply(tdmm_results_mean, "[[", "tdmm_discrete_fit")), 
-                                " (", round(sapply(tdmm_results_sd, "[[", "tdmm_discrete_fit"), 0), ")")
+  tdmm_table$LLIK_discrete = paste0(round(sapply(tdmm_results_mean, "[[", "tdmm_discrete_fit_llik")), 
+                                " (", round(sapply(tdmm_results_sd, "[[", "tdmm_discrete_fit_llik"), 0), ")")
   tdmm_table$LLIK_diff_discrete = paste0(round(sapply(tdmm_results_mean, "[[", "tdmm_fit_vs_discrete_fit")), 
                                 " (", round(sapply(tdmm_results_sd, "[[", "tdmm_fit_vs_discrete_fit"), 0), ")")
 
@@ -726,7 +763,7 @@ tdmm_tables = lapply(tdmm_results, function(x) {
 print(xtable(tdmm_tables[[1]]), include.rownames = FALSE)
 
 # 90 nodes
-# print(xtable(tdmm_tables[[2]]), include.rownames = FALSE)
+print(xtable(tdmm_tables[[2]]), include.rownames = FALSE)
 
 #potential identifiability issues!!
 
