@@ -1648,7 +1648,7 @@ plot_ny_static
 
 #     Final plots ----
 
-ggsave(filename = "IMG/la_sf_static_discrete.png", plot_grid(plot_la_static, plot_sf_static, ncol = 2, align = "h"), width = 9, height = 4)
+ggsave(filename = "IMG/la_sf_static_discrete.jpg", plot_grid(plot_la_static, plot_sf_static, ncol = 2, align = "h"), width = 9, height = 4)
 
 ggsave(filename = "IMG/ny_static_discrete.png", plot_ny_static)
 ################################################################################################
@@ -1678,7 +1678,7 @@ sf.noDC = left_join(sf.station, data.frame(id =  as.integer(names(sf2.0$FoundCom
 
 plot_la_noDC = ggmap(la_background) +
   geom_point(data=la.noDC, shape = 21, aes(x=lon, y=lat, fill = block, size = degree), alpha = .7) +
-  ggtitle("Los Angeles, Discrete, No Deg. Correction") +
+  ggtitle("Los Angeles, No DC Discrete Membership") +
   scale_fill_manual(values = c("black", "white")) +
   #scale_size(guide = "none") +
   theme_classic() + theme(plot.title = element_text(hjust = 0.5)) +
@@ -1698,7 +1698,7 @@ ggsave(filename = "IMG/la_noDC_discrete.png", plot_la_noDC)
 #       SF ----
 plot_sf_noDC = ggmap(sf_background) +
   geom_point(data=sf.noDC, shape = 21, aes(x=lon, y=lat, fill = block, size = degree), alpha = .7) +
-  ggtitle("San Francisco, Discrete, No Deg. Correction") +
+  ggtitle("San Francisco, No DC Discrete Membership") +
   scale_fill_manual(values = c("black", "white")) +
   #scale_size(guide = "none") +
   theme_classic() + theme(plot.title = element_text(hjust = 0.5)) +
@@ -1721,7 +1721,7 @@ ggsave(filename = "IMG/sf_noDC_discrete.png", plot_la_noDC)
 
 #     Final plots ----
 
-ggsave(filename = "IMG/la_sf_noDC_discrete.png", plot_grid(plot_la_noDC, plot_sf_noDC, ncol = 2, align = "h"), width = 9, height = 4)
+ggsave(filename = "IMG/la_sf_noDC_discrete.jpg", plot_grid(plot_la_noDC, plot_sf_noDC, ncol = 2, align = "h"), width = 9, height = 4)
 
 #ggsave(filename = "IMG/ny_noDC_discrete.png", plot_ny_noDC)
 
