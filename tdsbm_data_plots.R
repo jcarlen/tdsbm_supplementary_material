@@ -4,7 +4,7 @@
 # Created: 4-5-18
 
 #Set to the path to your tdsbm_supplementary_material folder:
-setwd("~/Documents/285J/tdsbm_supplementary_material")
+setwd("~/Documents/tdsbm_supplementary_material")
 
 ################################################################################################
 # 0. Setup ####
@@ -591,7 +591,7 @@ ggsave("IMG/sf_svd.png", svdplot2(sf.in, sf.out, 2, title = "Singular Vectors â€
 # setwd("..")
 
 #----------------------------------------------------------------------------------------------
-# Run discrete models
+# 3b. Run discrete models
 #   LA ----
 
   # 2 blocks
@@ -606,7 +606,10 @@ ggsave("IMG/sf_svd.png", svdplot2(sf.in, sf.out, 2, title = "Singular Vectors â€
   # 5 blocks
   la5.3 = sbmt(la_byhour,  degreeCorrect = 3, directed = T, klPerNetwork = 50, maxComms = 5, seed = 1)
   saveRDS(la5.3, "discrete_model_results/la5_3.RDS")
-
+  # 6 blocks
+  la6.3 = sbmt(la_byhour,  degreeCorrect = 3, directed = T, klPerNetwork = 50, maxComms = 6, seed = 1)
+  saveRDS(la6.3, "discrete_model_results/la6_3.RDS")
+  
 
 #   SF ----
   
@@ -619,6 +622,12 @@ ggsave("IMG/sf_svd.png", svdplot2(sf.in, sf.out, 2, title = "Singular Vectors â€
  # 4 blocks
  sf4.3 = sbmt(sf_byhour,  degreeCorrect = 3, directed = T, klPerNetwork = 50, maxComms = 4, seed = 1)
  saveRDS(sf4.3, "discrete_model_results/sf4_3.RDS")
+ # 5 blocks
+ sf5.3 = sbmt(sf_byhour,  degreeCorrect = 3, directed = T, klPerNetwork = 50, maxComms = 5, seed = 1)
+ saveRDS(sf5.3, "discrete_model_results/sf5_3.RDS")
+ # 6 blocks
+ sf6.3 = sbmt(sf_byhour,  degreeCorrect = 3, directed = T, klPerNetwork = 50, maxComms = 6, seed = 1)
+ saveRDS(sf6.3, "discrete_model_results/sf6_3.RDS")
 
 #   NY ----
  
@@ -791,7 +800,7 @@ levels(la_discrete$role) = la_discrete_labels
 
 plot_la_discrete = ggmap(la_background) +
   geom_point(data=la_discrete, shape = 21, aes(x=lon, y=lat, fill = role,
-                  size = degree/max(degree)), stroke = .2) +
+                  size = degree/max(degree)), stroke = .2, alpha = .7) +
   ggtitle("Los Angeles, Discrete Membership") +
   scale_fill_manual(values = c("black", "white"),
                     guide = guide_legend(reverse=TRUE, order = 1)) +
@@ -834,7 +843,7 @@ plot_la_continuous
 
 plot_la_mixed_discrete = plot_grid(plot_la_continuous, plot_la_discrete, rel_widths = c(4,4.85))
 
-ggsave("IMG/LA_mixed_discrete.png", plot_la_mixed_discrete, width = 9, height = 3.5)
+ggsave("IMG/LA_mixed_discrete.jpg", plot_la_mixed_discrete, width = 9, height = 3.5)
 
 
 #     +  Zoning ----
@@ -1006,7 +1015,7 @@ levels(sf_discrete$role) = sf_discrete_labels
 
 plot_sf_discrete = ggmap(sf_background) +
   geom_point(data=sf_discrete, shape=21, aes(x=lon, y=lat, fill = role, pch = role,
-                                             size = degree/max(degree)), stroke = .2) +
+                                             size = degree/max(degree)), stroke = .2, alpha = .7) +
   ggtitle("San Francisco, Discrete Membership") +
   scale_fill_manual(values = c("black","white"),
                     guide = guide_legend(reverse=TRUE, order = 1)) +
@@ -1076,7 +1085,7 @@ plot_sf_continuous
 
 plot_sf_mixed_discrete = plot_grid(plot_sf_continuous, plot_sf_discrete, rel_widths = c(4,4.75))
 
-ggsave("IMG/SF_mixed_discrete.png", plot_sf_mixed_discrete, width = 9, height  = 3.5)
+ggsave("IMG/SF_mixed_discrete.jpg", plot_sf_mixed_discrete, width = 9, height  = 3.5)
 
 #     + Omegas ----
 
