@@ -4,10 +4,9 @@
 # 3. mixed-membership to show impact of potential model mis-specification
 # ---------------------------------------------------------------------------------------------------------------
 # TO DO
-# - add generate_multilayer_array to sbmt package to facilitate simulation?
+# - add generate_multilayer_array to sbmt package to facilitate simulation? as "simulate" method?
 #     + implement & test for directed networks
 # - Add harder cases with smaller amplitude sin curves so hard to distinguish? if it gets harder try with more nodes.
-# - More heterogeneous degree correcton case?
 # - Note: degree correcton can also lead to a more parsimonious and interpretable model representation where there is degree heterogeneity 
 #   because a unique class is not needed for each degree-activity level.
 # ---------------------------------------------------------------------------------------------------------------
@@ -433,7 +432,7 @@ simulate_tdd <- function(roles, omega, theta = NULL,
 tdd_table_30 = data.frame(expand.grid(K = K_set, N = N_set[1], sim_method = c("tdd-sbm-0", "tdd-sbm-3"), 
                                         fit_method = c("tdd-sbm-0", "tdd-sbm-3", "ppsbm")))
 if (run_mode = TRUE) {
- tdd_results_30 = apply(tdd_table_30[3,], 1, function(x) {
+ tdd_results_30 = apply(tdd_table_30, 1, function(x) {
   cat("running for parameters:", x,"\n")
   K = as.numeric(x['K'])
   roles = generate_roles(N = as.numeric(x['N']), role_types = K, type = "discrete", rel_freq = rep(1, K)) #<- note: can alter relative role frequency by changing this specification. E.g. 1:K would give increasing frequency to higher-numbered roles.
@@ -711,11 +710,9 @@ if (run_mode = TRUE) {
 
 #   - load saved results and reformat ----
 tdmm_results_30 = readRDS("sim_study/output/tdmm_results_30.rds")
-
-tdmm_table_30 = data.frame(expand.grid(K = K_set, N = N_set[1]))
-
 tdmm_results_90 = readRDS("sim_study/output/tdmm_results_90.rds")
 
+tdmm_table_30 = data.frame(expand.grid(K = K_set, N = N_set[1]))
 tdmm_table_90 = data.frame(expand.grid(K = K_set, N = N_set[2]))
 
 tdmm_results = list(list(results = tdmm_results_30, table = tdmm_table_30), 
