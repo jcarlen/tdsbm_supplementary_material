@@ -610,7 +610,9 @@ ggsave("IMG/sf_svd.png", svdplot2(sf.in, sf.out, 2, title = "Singular Vectors â€
   la6.3 = sbmt(la_byhour,  degreeCorrect = 3, directed = T, klPerNetwork = 50, maxComms = 6, seed = 1)
   saveRDS(la6.3, "discrete_model_results/la6_3.RDS")
   
-
+  # built-in plot method check
+  # plot(la2.3); plot(la3.3); plot(la4.3); plot(la5.3); plot(la6.3)
+  
 #   SF ----
   
  # 2 blocks
@@ -629,6 +631,9 @@ ggsave("IMG/sf_svd.png", svdplot2(sf.in, sf.out, 2, title = "Singular Vectors â€
  sf6.3 = sbmt(sf_byhour,  degreeCorrect = 3, directed = T, klPerNetwork = 50, maxComms = 6, seed = 1)
  saveRDS(sf6.3, "discrete_model_results/sf6_3.RDS")
 
+ # built-in plot method check
+ # plot(sf2.3); plot(sf3.3); plot(sf4.3); plot(sf5.3); plot(sf6.3)
+ 
 #   NY ----
  
  # slow so loaded instead of run
@@ -692,6 +697,10 @@ la_discrete.4 = left_join(la.station, data.frame(id =  names(la_discrete.results
 la_discrete.results.5 = readRDS("discrete_model_results/la5_3.RDS")
 la_discrete.5 = left_join(la.station, data.frame(id =  names(la_discrete.results.5$FoundComms), 
                                                  role  =  (la_discrete.results.5$FoundComms)))
+# 6 blocks
+la_discrete.results.6 = readRDS("discrete_model_results/la6_3.RDS")
+la_discrete.6 = left_join(la.station, data.frame(id =  names(la_discrete.results.6$FoundComms), 
+                                                 role  =  (la_discrete.results.6$FoundComms)))
 
 #   SF ----
 #     + continuous (AKA mixed) ----
@@ -953,6 +962,9 @@ ggsave("IMG/la_continuous_zones.png", plot_grid(la_zone_continuous), height = 6,
 
 #     + Omegas ----
 # time-dependent parameters
+
+# built-in plot method:
+# plot(la2.3); plot(la3.3); plot(la4.3); plot(la5.3); plot(la6.3)
 
 la.plot.order = c("home to home", "home to work", "work to home", "work to work")
 

@@ -661,7 +661,7 @@ simulate_tdmm <- function(roles, omega, n_sim = 10, n_iter = 10, directed = TRUE
 #   - run tdd-sbm simulation(if run_mode = TRUE) ----
 
 if (run_mode = TRUE) {
-  tdmm_results_30 = lapply(1:length(K_set), function(i) {
+  tdmm_results_30 = lapply(1:length(K_set)[2], function(i) {
     #setwd("mixed_model_implementation_python") # assume starting from tdsbm_supplementary_material directory
     setwd("/Users/jcarlen/Documents/tdsbm_supplementary_material/mixed_model_implementation_python")
     N = N_set[1]
@@ -698,8 +698,8 @@ if (run_mode = TRUE) {
     #roles_mixed = sweep(roles_mixed, 2, apply(roles_mixed, 2, min), "-") #better if sample min >0
     roles_mixed = sweep(roles_mixed, 2, colSums(roles_mixed), "/")
     result = simulate_tdmm(roles_mixed, block_omega,
-                           n_sim = 3,
-                           n_iter = 3,
+                           n_sim = N_sim,
+                           n_iter = N_iter,
                            directed = TRUE, verbose = FALSE)
     setwd("/Users/jcarlen/Documents/tdsbm_supplementary_material")
     #setwd("..")
@@ -731,7 +731,7 @@ tdmm_tables = lapply(tdmm_results, function(x) {
   tdmm_table$K = as.character(tdmm_table$K) #for print formatting
   tdmm_table$N = as.character(tdmm_table$N) #for print formatting
   tdmm_table$BAE = paste0(round(sapply(tdmm_results_mean, "[[", "tdmm_sbm_bae"), 2), 
-                           " (", round(sapply(tdmm_results_sd, "[[", "tdmm_sbm_bae"), 2), ")")
+                           " (", round(sapply(tdmm_results_sd, "[[", "tdmm_sbm_bae"), 3), ")") #need and extra dig here
   tdmm_table$MAPE = paste0(round(sapply(tdmm_results_mean, "[[", "tdmm_sbm_mape"), 2), 
                            " (", round(sapply(tdmm_results_sd, "[[", "tdmm_sbm_mape"), 2), ")")
   tdmm_table$LLIK_sim = paste0(round(sapply(tdmm_results_mean, "[[", "tdmm_sbm_sim_llik")), 
