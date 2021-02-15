@@ -375,7 +375,7 @@ combined_by_hour_plot = plot_grid(ny_trip_count_by_hour, sf_trip_count_by_hour, 
                                   nrow = 1, rel_widths = c(.5,.3,.3))
 ggsave("IMG/trip_count_by_hour.png", plot = combined_by_hour_plot, width = 10, height = 4)
 
-#     with sf top stations ----
+#     with sf top stations (weekday traffic) ----
 
 top_id_sf = sf.station.all %>% 
   arrange(-degree) %>% 
@@ -383,6 +383,7 @@ top_id_sf = sf.station.all %>%
   pull(id)
 
 sf_top_station_traffic = sf %>% 
+  filter(!weekend)  %>% 
   group_by(Start.Station, start_station_id, hour) %>% 
   summarize(departing = sum(count)) %>% 
   left_join(sf %>% 
