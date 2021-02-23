@@ -17,6 +17,7 @@ library(ppsbm)
 library(fossil) #for adj rand index -- requires less manipulation of our output than version of ARI in ppsbm package
 library(gtools) #for permutations
 library(xtable)
+library(dplyr) #for nth
 
 # run mode (recreate or load save data?) ----
 run_mode = FALSE
@@ -552,6 +553,8 @@ simulate_tdmm <- function(roles, omega, n_sim = 10, n_iter = 10, directed = TRUE
   # initialize output vectors ----
   tdmm_sbm_bae = 1:n_sim #sum of abs error averaged over number of blocks (since columns are sum-1 normalized)
   tdmm_sbm_mape = 1:n_sim
+  tdmm_sbm_mape_l = 1:n_sim
+  tdmm_sbm_mape_p = 1:n_sim
   tdmm_sbm_sim_llik =1:n_sim
   tdmm_sbm_fit_llik =1:n_sim
   tdmm_discrete_fit_llik =1:n_sim
@@ -584,7 +587,12 @@ simulate_tdmm <- function(roles, omega, n_sim = 10, n_iter = 10, directed = TRUE
    # store result metrics
    
    tdmm_sbm_bae[s] = mean(colSums(abs(roles[,block_order] - tdmm_sbm_roles)))
-   tdmm_sbm_mape[s] = mean(abs(tdmm_sbm_omega_array - omega_ordered)/omega_ordered) #+1)??
+   tdmm_sbm_mape[s] = mean(abs(tdmm_sbm_omega_array - omega_ordered)/omega_ordered) #+1)#??
+   #timewise: mean of absolute error over each *layer*
+   tdmm_sbm_mape_l[s] =  mean(apply(abs(tdmm_sbm_omega_array - omega_ordered), 3, sum)/apply(omega_ordered, 3, sum))
+   #pairwise: mean of absolute error over *block pair curve*
+   tdmm_sbm_mape_p[s] =  mean(apply(abs(tdmm_sbm_omega_array - omega_ordered), 1:2, sum)/apply(omega_ordered, 1:2, sum))
+     #
    # llik of sim data under true model
    tdmm_sbm_sim_llik[s] = tdmm_sbm_llik(A = sim_mixed_edge_array, C = roles, omega = omega, selfEdges = TRUE, directed = TRUE)
    # llik of sim data under estimated parameters
@@ -595,7 +603,7 @@ simulate_tdmm <- function(roles, omega, n_sim = 10, n_iter = 10, directed = TRUE
      par(mfrow = c(K+1,K)); par(mai = c(.3,.4,.3,.3))
      for (i in 1:K^2) { #omega comparison
        plot(as.numeric(tdmm_sbm_omega[i,]), type = "l", 
-            ylim = c(0,max(c(max(tdmm_sbm_omega), max(omega_ordered)))),
+            ylim = c(0,max(c(max(tdmm_sbm_omega[i,]), max(apply(omega_ordered,3,nth,i))))),
             ylab = "omega_gh", xlab = "time")
        points(apply(omega_ordered, 3, dplyr::nth, i), col = "red", type = "l")
      }
@@ -645,6 +653,8 @@ simulate_tdmm <- function(roles, omega, n_sim = 10, n_iter = 10, directed = TRUE
     tdmm_sbm_bae = tdmm_sbm_bae,
     # block-to-block activity detection
     tdmm_sbm_mape = tdmm_sbm_mape,
+    tdmm_sbm_mape_l= tdmm_sbm_mape_l,
+    tdmm_sbm_mape_p = tdmm_sbm_mape_p,
     # compare likelihood of data under fit vs. true model used to simulate the data
     tdmm_sbm_sim_llik = tdmm_sbm_sim_llik,
     tdmm_sbm_fit_llik = tdmm_sbm_fit_llik,
@@ -661,7 +671,7 @@ simulate_tdmm <- function(roles, omega, n_sim = 10, n_iter = 10, directed = TRUE
 #   - run tdd-sbm simulation(if run_mode = TRUE) ----
 
 if (run_mode = TRUE) {
-  tdmm_results_30 = lapply(1:length(K_set)[2], function(i) {
+  tdmm_results_30 = lapply(1:length(K_set), function(i) {
     #setwd("mixed_model_implementation_python") # assume starting from tdsbm_supplementary_material directory
     setwd("/Users/jcarlen/Documents/tdsbm_supplementary_material/mixed_model_implementation_python")
     N = N_set[1]
@@ -766,3 +776,25 @@ print(xtable(tdmm_tables[[2]]), include.rownames = FALSE)
 
 
 
+# 6. tdmm simulation with LA results -----
+
+if (run_mode = TRUE) {
+  tdmm_results_LA = lapply(1:length(K_set), function(i) {
+    setwd("~/Documents/tdsbm_supplementary_material/mixed_model_implementation_python")
+    N = 61
+    K = K_set[i]
+    print(K)
+    omega = omega_list[[i]]
+    block_omega =  lapply(read.csv(paste0("../mixed_model_results/LA_", K,"_omega.csv"), sep = ",", header = T), matrix, K, K) # reconstruct result in same form as discrete
+    roles_mixed = read.csv(paste0("../mixed_model_results/LA_", K,"_roles.csv"))[,-1]
+    result = simulate_tdmm(roles_mixed, block_omega, 
+                           n_sim = N_sim,
+                           n_iter = N_iter,
+                           directed = TRUE, verbose = TRUE)
+    setwd("~/Documents/tdsbm_supplementary_material")
+    return(result)
+  })
+  saveRDS(tdmm_results_LA, "sim_study/output/tdmm_results_LA.rds")
+}
+
+lapply(lapply(tdmm_results_LA, colMeans), round, 2)
