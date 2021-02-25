@@ -694,7 +694,7 @@ if (run_mode = TRUE) {
   saveRDS(tdmm_results_30, "sim_study/output/tdmm_results_30.rds")
 }
 
-if (run_mode = TRUE) {
+if (run_mode = TRUE) { #takes a while
   tdmm_results_90 = lapply(1:length(K_set), function(i) {
     #setwd("mixed_model_implementation_python") # assume starting from tdsbm_supplementary_material directory
     setwd("/Users/jcarlen/Documents/tdsbm_supplementary_material/mixed_model_implementation_python")
@@ -714,21 +714,13 @@ if (run_mode = TRUE) {
     setwd("/Users/jcarlen/Documents/tdsbm_supplementary_material")
     #setwd("..")
     return(result)
-  }) #takes a few minutes
+  })
   saveRDS(tdmm_results_90, "sim_study/output/tdmm_results_90.rds")
 }
 
 #   - load saved results and reformat ----
-tdmm_results_30 = readRDS("sim_study/output/tdmm_results_30.rds")
-tdmm_results_90 = readRDS("sim_study/output/tdmm_results_90.rds")
 
-tdmm_table_30 = data.frame(expand.grid(K = K_set, N = N_set[1]))
-tdmm_table_90 = data.frame(expand.grid(K = K_set, N = N_set[2]))
-
-tdmm_results = list(list(results = tdmm_results_30, table = tdmm_table_30), 
-                   list(results = tdmm_results_90, table = tdmm_table_90))
-
-tdmm_tables = lapply(tdmm_results, function(x) {
+tdmm_table_function <- function(x) {
   
   tdmm_table = x$table
   tdmm_result = x$results
@@ -741,9 +733,13 @@ tdmm_tables = lapply(tdmm_results, function(x) {
   tdmm_table$K = as.character(tdmm_table$K) #for print formatting
   tdmm_table$N = as.character(tdmm_table$N) #for print formatting
   tdmm_table$BAE = paste0(round(sapply(tdmm_results_mean, "[[", "tdmm_sbm_bae"), 2), 
-                           " (", round(sapply(tdmm_results_sd, "[[", "tdmm_sbm_bae"), 3), ")") #need and extra dig here
+                          " (", round(sapply(tdmm_results_sd, "[[", "tdmm_sbm_bae"), 3), ")") #need and extra dig here
   tdmm_table$MAPE = paste0(round(sapply(tdmm_results_mean, "[[", "tdmm_sbm_mape"), 2), 
                            " (", round(sapply(tdmm_results_sd, "[[", "tdmm_sbm_mape"), 2), ")")
+  tdmm_table$MAPE_L = paste0(round(sapply(tdmm_results_mean, "[[", "tdmm_sbm_mape_l"), 2), 
+                             " (", round(sapply(tdmm_results_sd, "[[", "tdmm_sbm_mape_l"), 2), ")")
+  tdmm_table$MAPE_P = paste0(round(sapply(tdmm_results_mean, "[[", "tdmm_sbm_mape_p"), 2), 
+                             " (", round(sapply(tdmm_results_sd, "[[", "tdmm_sbm_mape_p"), 2), ")")
   tdmm_table$LLIK_sim = paste0(round(sapply(tdmm_results_mean, "[[", "tdmm_sbm_sim_llik")), 
                                " (", round(sapply(tdmm_results_sd, "[[", "tdmm_sbm_sim_llik"), 0), ")")
   tdmm_table$LLIK_fit = paste0(round(sapply(tdmm_results_mean, "[[", "tdmm_sbm_fit_llik")), 
@@ -751,20 +747,31 @@ tdmm_tables = lapply(tdmm_results, function(x) {
   tdmm_table$LLIK_diff = paste0(round(sapply(tdmm_results_mean, "[[", "tdmm_sim_vs_fit")), 
                                 " (", round(sapply(tdmm_results_sd, "[[", "tdmm_sim_vs_fit"), 0), ")")
   tdmm_table$LLIK_discrete = paste0(round(sapply(tdmm_results_mean, "[[", "tdmm_discrete_fit_llik")), 
-                                " (", round(sapply(tdmm_results_sd, "[[", "tdmm_discrete_fit_llik"), 0), ")")
+                                    " (", round(sapply(tdmm_results_sd, "[[", "tdmm_discrete_fit_llik"), 0), ")")
   tdmm_table$LLIK_diff_discrete = paste0(round(sapply(tdmm_results_mean, "[[", "tdmm_fit_vs_discrete_fit")), 
-                                " (", round(sapply(tdmm_results_sd, "[[", "tdmm_fit_vs_discrete_fit"), 0), ")")
-
+                                         " (", round(sapply(tdmm_results_sd, "[[", "tdmm_fit_vs_discrete_fit"), 0), ")")
+  
   #timing (exclude variable selection runs)
   mean_time = round(sapply(tdmm_result, function(x) {mean(x$fit_time[is.na(x$tdmm_sbm_est_K)])}), 2)
   sd_time = round(sapply(tdmm_result, function(x) {sd(x$fit_time[is.na(x$tdmm_sbm_est_K)])}), 2)
   tdmm_table$`Time (s)` = paste0(mean_time, " (", sd_time, ")")
   
-  tdmm_table = tdmm_table[,c("K", "N", "BAE", "MAPE", "LLIK_sim", "LLIK_diff", "LLIK_diff_discrete")]
+  tdmm_table = tdmm_table[,c("K", "N", "BAE", "MAPE", "MAPE_P",
+                             "LLIK_sim", "LLIK_diff", "LLIK_diff_discrete")]
   
   return(xtable(tdmm_table))
-})
+}
 
+tdmm_results_30 = readRDS("sim_study/output/tdmm_results_30.rds")
+tdmm_results_90 = readRDS("sim_study/output/tdmm_results_90.rds")
+
+tdmm_table_30 = data.frame(expand.grid(K = K_set, N = N_set[1]))
+tdmm_table_90 = data.frame(expand.grid(K = K_set, N = N_set[2]))
+
+tdmm_results = list(list(results = tdmm_results_30, table = tdmm_table_30), 
+                   list(results = tdmm_results_90, table = tdmm_table_90))
+
+tdmm_tables = lapply(tdmm_results, tdmm_table_function)
 
 # 30 nodes
 print(xtable(tdmm_tables[[1]]), include.rownames = FALSE)
@@ -772,11 +779,10 @@ print(xtable(tdmm_tables[[1]]), include.rownames = FALSE)
 # 90 nodes
 print(xtable(tdmm_tables[[2]]), include.rownames = FALSE)
 
-#potential identifiability issues!!
-
-
 
 # 6. tdmm simulation with LA results -----
+
+#   - run tdd-sbm simulation(if run_mode = TRUE) ----
 
 if (run_mode = TRUE) {
   tdmm_results_LA = lapply(1:length(K_set), function(i) {
@@ -797,4 +803,16 @@ if (run_mode = TRUE) {
   saveRDS(tdmm_results_LA, "sim_study/output/tdmm_results_LA.rds")
 }
 
-lapply(lapply(tdmm_results_LA, colMeans), round, 2)
+#   - load saved results and reformat ----
+
+tdmm_results_LA = readRDS("sim_study/output/tdmm_results_LA.rds")
+
+tdmm_table_LA = data.frame(expand.grid(K = K_set, N = 61))
+
+tdmm_table_LA = tdmm_table_function(list(results = tdmm_results_LA, table = tdmm_table_LA))
+
+print(xtable(tdmm_table_LA, include.rownames = FALSE))
+
+
+
+
