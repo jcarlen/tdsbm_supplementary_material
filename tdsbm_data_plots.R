@@ -10,7 +10,7 @@ setwd("~/Documents/tdsbm_supplementary_material")
 # 0. Setup ####
 
 install_list = c("devtools", "ggplot2", "dplyr", "tidyr", "ggmap","reshape2",
-                 "lubridate","rgdal","raster","broom", "RColorBrewer","scales",
+                 "lubridate","rgdal","raster","sf", "RColorBrewer","scales",
                  "cowplot","stringr", "foreign","xtable", "latex2exp", "mapproj",
                  "sbmt")
 
@@ -24,7 +24,7 @@ for (pkg in install_list) {
 }
 
 package_list = c("ggplot2", "dplyr", "tidyr", "ggmap","reshape2",
-                 "lubridate","rgdal", "broom", "RColorBrewer","scales",
+                 "lubridate","rgdal", "sf", "RColorBrewer","scales",
                  "cowplot","stringr", "foreign", "latex2exp",
                  "sbmt") #don't load devtools, raster or xtable
 
@@ -857,6 +857,7 @@ ggsave("IMG/LA_mixed_discrete.jpg", plot_la_mixed_discrete, width = 9, height = 
 
 
 #     +  Zoning ----
+#         load zoning map ----
 
 if (!file.exists("data/zoning/LA_Zoning")) {
   unzip("data/zoning/LA_Zoning.zip", exdir = "data/zoning")
@@ -865,28 +866,18 @@ if (!file.exists("data/zoning/LA_Zoning")) {
 lazd.shp <- readOGR("data/zoning/LA_Zoning/Zoning.shp")
 #lazd.dbf <- readOGR("data/zoning/LA_Zoning/Zoning.dbf")
 
+# look at given projection system (this site helpful: http://rspatial.org/spatial/rst/6-crs.html)
 raster::crs(lazd.shp)
 
 #         convert to a standard coordinate reference system with longlat ####
 
 lazd.latlong <- spTransform(lazd.shp, CRS("+proj=longlat +datum=WGS84"))
-lazd.spdf <- broom:::tidy.SpatialPolygonsDataFrame(lazd.latlong)
-
-lazd.spdf$id = as.numeric(lazd.spdf$id) + 1 
+#lazd.spdf <- broom:::tidy.SpatialPolygonsDataFrame(lazd.latlong) #deprecated/slow
+lazd.spdf <- sf::st_as_sf(lazd.latlong) #convert SpatialPolygonsDataFrame to sf
 
 #         what are the zoning types? ####
 
-lazd.spdf$ZONEDIST = factor(lazd.spdf$id)
-levels(lazd.spdf$ZONEDIST) = lazd.latlong$ZONE_CMPLT
-lazd.spdf$zone = as.character(lazd.spdf$ZONEDIST)
-
-#         subset to our bounding box of interest ####
-
-lazd.spdf = subset(lazd.spdf, long > -118.28 & long < -118.2)
-lazd.spdf = subset(lazd.spdf, lat > 34 & lat < 34.7)
-lazd.spdf$ZONEDIST = droplevels(lazd.spdf$ZONEDIST)
-
-lazd.spdf$zone = as.character(lazd.spdf$ZONEDIST)
+lazd.spdf$zone = as.character(lazd.spdf$ZONE_CMPLT)
 tmp = str_extract(lazd.spdf$zone, "[A-Z]{1}[A-Z0-9]{1}")
 tmp[which(is.na(tmp))] = "P" 
 lazd.spdf$zone = tmp
@@ -912,9 +903,9 @@ lapal[3] = "#D9D1CE"; lapal[4] = "green4"; lapal[5] = "red"; lapal[6] = "violet"
 
 #         plot (discrete) ####
 
-la_zone_discrete = ggplot() + geom_polygon(data = lazd.spdf,
-                                           aes(x = long, y = lat, group = group, fill = zone_type)) +
-  coord_map(xlim= c(-118.2748, -118.225), ylim = c(34.02, 34.07)) +
+la_zone_discrete = ggplot(lazd.spdf) + 
+  geom_sf(aes(fill = zone_type), color = "white", size = .05) +
+  coord_sf(xlim= c(-118.2748, -118.225), ylim = c(34.02, 34.07)) +
   scale_fill_manual(values = alpha(lapal,.5), name = "zone type") +
   ggtitle("Discrete Roles versus LA Zoning") +
   geom_point(data = la_discrete, aes(x = lon, y = lat, color = role, size = degree/max(degree))) +
@@ -932,13 +923,12 @@ la_zone_discrete = ggplot() + geom_polygon(data = lazd.spdf,
         axis.text.y = element_blank(),
         axis.ticks.y =element_blank(),
         axis.line.y = element_blank())
-la_zone_discrete
 
 #         plot (continuous) ####
 
-la_zone_continuous = ggplot() + geom_polygon(data = lazd.spdf,
-                                             aes(x = long, y = lat, group = group, fill = zone_type)) +
-  coord_map(xlim= c(-118.2748, -118.225),  ylim = c(34.02, 34.07)) +
+la_zone_continuous = ggplot(lazd.spdf) + 
+  geom_sf(aes(fill = zone_type), color = "white", size = .05) +
+  coord_sf(xlim= c(-118.2748, -118.225), ylim = c(34.02, 34.07)) +
   scale_fill_manual(values = alpha(lapal,.5), name = "zone type") +
   geom_point(data = la_continuous, aes(x = lon, y = lat, color = role, size = C_total)) +
   ggtitle("Mixed-Membership Roles versus LA Zoning") +
@@ -957,9 +947,10 @@ la_zone_continuous = ggplot() + geom_polygon(data = lazd.spdf,
         axis.text.y = element_blank(),
         axis.ticks.y =element_blank(),
         axis.line.y = element_blank())
+
 la_zone_continuous
 
-ggsave("IMG/la_continuous_zones.png", plot_grid(la_zone_continuous), height = 6, width = 6)
+ggsave("IMG/la_continuous_zones.png", la_zone_continuous, height = 6, width = 6)
 
 #     + Omegas ----
 # time-dependent parameters
@@ -1410,34 +1401,30 @@ plot_ny_mixed_discrete = plot_grid(plot_ny_continuous.3, plot_ny_discrete.3, rel
 ggsave("IMG/NY_mixed_discrete.png", plot_ny_mixed_discrete, width = 10, height = 6, units = "in")
 
 #    + Zoning ----
-#         load zoning maps & convert to lat long coords ####
+#         load zoning map ---- 
 
 # new york zoning districts released 2018: https://www1.nyc.gov/site/planning/data-maps/open-data/dwn-gis-zoning.page
 # co files are for commercial overlays. "commercial overlays are located in residential zoning districts. It means that you can have a commercial use in a residential area." https://jorgefontan.com/commercial-overlay-nyc-zoning/
 # CRS = coordinate reference system 
 # LCC = lambert conformal conic projection
 
-#         load ####
 if (!file.exists("data/zoning/nycgiszoningfeatures_201712shp")) {
   unzip("data/zoning/nycgiszoningfeatures_201712shp.zip", exdir = "data/zoning")
 }
 
 nyzd.shp <- readOGR("data/zoning/nycgiszoningfeatures_201712shp/nyzd.shp")
-nyzd.dbf = read.dbf("data/zoning/nycgiszoningfeatures_201712shp/nyzd.dbf") #has ZONEDIST types
+#nyzd.dbf = read.dbf("data/zoning/nycgiszoningfeatures_201712shp/nyzd.dbf") #has ZONEDIST types
+
 # look at given projection system (this site helpful: http://rspatial.org/spatial/rst/6-crs.html)
 raster::crs(nyzd.shp)
-#         convert to a standard coordinate reference system with longlat ####
-nyzd.latlong <- spTransform(nyzd.shp, CRS("+proj=longlat +datum=WGS84"))
 
-nyzd.spdf <- broom:::tidy.SpatialPolygonsDataFrame(nyzd.latlong)
-head(nyzd.spdf)
-#IMPORANT TO DO THIS NEXT ID STEP. not exactly sure why. 
-nyzd.spdf$id = as.numeric(nyzd.spdf$id) + 1 
+#         convert to a standard coordinate reference system with longlat ####
+
+nyzd.latlong <- spTransform(nyzd.shp, CRS("+proj=longlat +datum=WGS84"))
+#nyzd.spdf <- broom:::tidy.SpatialPolygonsDataFrame(nyzd.latlong)
+nyzd.spdf <- sf::st_as_sf(nyzd.latlong) #convert SpatialPolygonsDataFrame to sf
 
 #         what are the zoning types? ####
-#Fortunately, the ordering of "id" is the same as that stored in shape@data$region: https://stackoverflow.com/questions/40576457/keep-region-names-when-tidying-a-map-using-broom-package
-nyzd.spdf$ZONEDIST = factor(nyzd.spdf$id)
-levels(nyzd.spdf$ZONEDIST) = nyzd.latlong$ZONEDIST
 nyzd.spdf$zone = as.character(nyzd.spdf$ZONEDIST)
 nyzd.spdf$zone = sapply(nyzd.spdf$zone, function(x) {
   if (startsWith(x ,"BPC")) return("Battery Park City")
@@ -1450,15 +1437,16 @@ nyzd.spdf$zone = sapply(nyzd.spdf$zone, function(x) {
 
 # nyzd.co should give information about commercial overlays
 
-#         pre-process
 #         plot (discrete) ####
 
 # create fill2 to have two non-contradictory fill scales
 fill2 = (ny_discrete.3 %>% mutate(fill2 = c("white", "black", "gray")[role]))$fill2
 
-plot_ny_discrete_zone = ggplot() + 
-  geom_polygon(data = nyzd.spdf, aes(x = long, y = lat, group = group, fill = zone)) +
-  scale_fill_brewer(type = "seq", palette = 2, direction = -1, name = "zone type") + 
+plot_ny_discrete_zone = 
+  ggplot(nyzd.spdf) + 
+  geom_sf(aes(fill = zone), color = "white", size = .05) +
+  coord_sf(xlim= c(-74.02, -73.93), ylim = c(40.66, 40.80)) +
+  scale_fill_brewer(type = "seq", palette = 2, direction = -1, name = "zone type") +
   theme_classic() + 
   geom_point(data = ny_discrete.3, 
              aes(x = lon, y = lat, shape = role, size = degree/max(degree)),
@@ -1468,8 +1456,8 @@ plot_ny_discrete_zone = ggplot() +
   guides(shape = guide_legend(override.aes = list(fill = c("white", "black", "gray")), order = 1),
          size = "none") +
   scale_size(range = c(.5,2.5), name = TeX(paste0("degree","\\textbf{/}","max(degree)"))) +
-  xlim(-74.02, -73.925) + ylim(40.65, 40.81) +
-  coord_map() + #<- takes away angle
+  #xlim(-74.02, -73.925) + ylim(40.65, 40.81) +
+  #coord_map() + #<- takes away angle
   #xlab("longitude") + ylab("latitude") +
   theme(plot.title = element_text(hjust = 0.5, size = 14),
         axis.title.x = element_blank(),
@@ -1489,15 +1477,17 @@ ggsave("IMG/ny_discrete_zones.png", plot_ny_discrete_zone, width = 5, height = 8
 
 #         plot (continuous) ####
 
-plot_ny_continuous_zone = ggplot() + geom_polygon(data = nyzd.spdf, aes(x = long, y = lat, group = group, fill = zone)) +
-  scale_fill_brewer(type = "seq", palette = 2, direction = -1, name = "zone type") + 
+plot_ny_continuous_zone = ggplot(nyzd.spdf) + 
+  geom_sf(aes(fill = zone), color = "white", size = .05) +
+  coord_sf(xlim= c(-74.02, -73.93), ylim = c(40.66, 40.80)) +
+  scale_fill_brewer(type = "seq", palette = 2, direction = -1, name = "zone type") +
   theme_classic() + 
   geom_point(data = ny_continuous.3, aes(x = lon, y = lat), color = ny_continuous.3$role) +
   ggtitle("Continuous Roles versus NYC Zoning Types") +
   #guides(color = "none") +
   scale_size(range = c(1,5)) +
-  xlim(-74.02, -73.925) + ylim(40.65, 40.85) +
-  coord_map() + #<- takes away angle
+  #xlim(-74.02, -73.925) + ylim(40.65, 40.85) +
+  #coord_map() + #<- takes away angle
   #xlab("longitude") + ylab("latitude") +
   theme(plot.title = element_text(hjust = 0.5, size = 14),
         axis.title.x = element_blank(),
@@ -1511,6 +1501,7 @@ plot_ny_continuous_zone = ggplot() + geom_polygon(data = nyzd.spdf, aes(x = long
 plot_ny_continuous_zone
 
 ggsave("IMG/ny_continuous_zones.png", plot_ny_continuous_zone) 
+
 #     + Omegas ----
 
 # 3 - block
