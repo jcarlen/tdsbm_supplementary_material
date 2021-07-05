@@ -659,7 +659,14 @@ ggsave("IMG/sf_svd.png", svdplot2(sf.in, sf.out, 2, title = "Singular Vectors â€
 # saveRDS(ny4.3, "discrete_model_results/ny4_3.RDS")
 # ny4.end.time = Sys.time()
 # ny4.time = ny4.end.time - ny4.start.time #8.1524 hrs, 6.2345 hrs (2 trials), finds best by iter 12, 5.67 another trial
-#    
+#  
+# 5 blocks
+# ny5.start.time = Sys.time()
+# ny5.3 = sbmt(ny_byhour,  degreeCorrect = 3, directed = T, klPerNetwork = 50, maxComms = 5, seed = 1)
+# saveRDS(ny5.3, "discrete_model_results/ny5_3.RDS")
+# ny5.end.time = Sys.time()
+# ny5.time = ny5.end.time - ny5.start.time #9.552415 hours
+#
 # # 6 blocks
 # ny6.start.time = Sys.time()
 # ny6.3 = sbmt(ny_byhour,  degreeCorrect = 3, directed = T, klPerNetwork = 50, maxComms = 6, seed = 1)
@@ -752,6 +759,11 @@ ny_discrete.3 = left_join(ny1610.station, data.frame(id =  as.integer(names(ny_d
 ny_discrete.results.4 <- readRDS("discrete_model_results/ny4_3.RDS")
 ny_discrete.4 = left_join(ny1610.station, data.frame(id =  as.integer(names(ny_discrete.results.4$FoundComms)), role  =  (ny_discrete.results.4$FoundComms), stringsAsFactors = F))
 #write.csv(ny_discrete.4, file = "discrete_model_results/ny4_3_roles.csv", row.names = F)
+
+# 5 blocks
+ny_discrete.results.5 <- readRDS("discrete_model_results/ny5_3.RDS")
+ny_discrete.5 = left_join(ny1610.station, data.frame(id =  as.integer(names(ny_discrete.results.5$FoundComms)), role  =  (ny_discrete.results.5$FoundComms), stringsAsFactors = F))
+#write.csv(ny_discrete.5, file = "discrete_model_results/ny5_3_roles.csv", row.names = F)
 
 # 6 blocks
 ny_discrete.results.6 <- readRDS("discrete_model_results/ny6_3.RDS")
@@ -1147,9 +1159,11 @@ levels(ny_discrete.3$role) = ny_discrete_labels.3
 ny_discrete.4$role = as.factor(ny_discrete.4$role)
 levels(ny_discrete.4$role) = c("Brooklyn", "Manhattan (home)", "Manhattan (midtown)", "Manhattan (work)")
 
+# 5 blocks
+ny_discrete.5$role = as.factor(ny_discrete.5$role)
+
 # 6 blocks
 ny_discrete.6$role = as.factor(ny_discrete.6$role)
-
 # assign roles
 left_join(ny_discrete.6, ny1610.station.names, by = c("id"="ID"))
 ny_discrete_labels.6 = c(as.character(0:5)) #TBD
@@ -1275,6 +1289,31 @@ plot_ny_discrete.4 = ggmap(ny_background) +
 
 plot_ny_discrete.4
 
+
+#               5 blocks ----
+
+#change level order for plot
+ny_discrete.5$role = factor(ny_discrete.5$role, levels = 1:5)
+
+plot_ny_discrete.5 = ggmap(ny_background) +
+  geom_point(data = ny_discrete.5, aes(x = lon, y = lat, fill = role,
+                                       shape = role, size = degree/max(degree)), color = "black", alpha = .7) +
+  ggtitle("New York, Discrete Membership") +
+  xlim(-74.02,-73.93) + ylim(40.65, 40.8) +
+  theme_classic() + theme(plot.title = element_text(hjust = 0.5)) +
+  guides(size = guide_legend(order = 2)) +
+  scale_size(range = c(1,4), name = TeX(paste0("degree","\\textbf{/}","max(degree)"))) +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.title.x = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.line.x = element_blank(),
+        axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y =element_blank(),
+        axis.line.y = element_blank())
+
+plot_ny_discrete.5
 
 #               6 blocks ----
 
@@ -2008,7 +2047,7 @@ ny_plot_hm.2 = ggplot(ny_hm_compare.2) +
   facet_grid(~model) +
   #scale_fill_continuous(low = "black", high = "white", breaks = seq(0,1,by=0.5), 
    #                     labels = c("work", "", "home")) + 
-  scale_shape_manual(values = c(21, 22), labels = c("work", "home"), name = "TD role") +
+  scale_shape_manual(values = c(21, 22), labels = c("work", "home"), name = "role") +
   guides(shape = guide_legend(override.aes = list(fill = c("black","white")))) +
   theme_classic() +
   theme(plot.title = element_text(hjust = 0.5),
@@ -2083,7 +2122,7 @@ ny_plot_hm.4 = ggplot(ny_hm_compare.4) +
   geom_point(aes(x = lon, y = lat, shape = role_tdd), fill = as.character(ny_hm_compare.4$role_tdmm), size = 4) + 
   facet_grid(~model) +
   scale_shape_manual(values = c(21, 22, 23, 24), labels = c("home", "mixed", "home|park", "work")) +
-  guides(shape = guide_legend(title = "TD role", override.aes = list(fill = c("blue", "green", "red", "black")))) +
+  guides(shape = guide_legend(title = "role", override.aes = list(fill = c("blue", "green", "red", "black")))) +
   #geom_text(aes(label = id), col = "red") +
   #geom_point(x = -73.9935, y = 40.7506, color = "green", size = 3, shape = 13) + #penn station
   #geom_point(x = -73.9903, y = 40.7569, color = "green", size = 3, shape = 13) + #port authority
@@ -2126,7 +2165,7 @@ ny_plot_hm.5 = ggplot(ny_hm_compare.5) +
              fill = as.character(ny_hm_compare.5$role_tdmm), size = 4) + 
   facet_grid(~model) +
   scale_shape_manual(values = c(21, 22, 23, 24, 25), labels = levels(ny_hm_discrete.5$role)) +
-  guides(shape = guide_legend(title = "TD role", 
+  guides(shape = guide_legend(title = "role", 
                               override.aes = list(fill = rgb(role.colors.5, maxColorValue = 255)[c(5,3,1,4,2)]))) +
   #geom_text(aes(label = id), col = "red") +
   #geom_point(x = -73.9935, y = 40.7506, color = "green", size = 3, shape = 13) + #penn station
@@ -2152,7 +2191,7 @@ ny_plot_hm = ggplot(ny_hm_compare.5 %>% filter(model != "SBM (5)")) +
              fill = as.character(ny_hm_compare.5$role_tdmm[!ny_hm_compare.5$model=="SBM (5)"]), size = 4) + 
   facet_grid(~model) +
   scale_shape_manual(values = c(21, 22, 23, 24, 25), labels = levels(ny_hm_discrete.5$role)) +
-  guides(shape = guide_legend(title = "TD role", 
+  guides(shape = guide_legend(title = "role", 
                               override.aes = list(fill = rgb(role.colors.5, maxColorValue = 255)[c(5,3,1,4,2)]))) +
   #geom_text(aes(label = id), col = "red") +
   #geom_point(x = -73.9935, y = 40.7506, color = "green", size = 3, shape = 13) + #penn station

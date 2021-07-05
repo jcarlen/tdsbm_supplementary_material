@@ -656,11 +656,11 @@ simulate_tdmm <- function(roles, omega, n_sim = 10, n_iter = 10, directed = TRUE
     tdmm_sbm_mape_l= tdmm_sbm_mape_l,
     tdmm_sbm_mape_p = tdmm_sbm_mape_p,
     # compare likelihood of data under fit vs. true model used to simulate the data
-    tdmm_sbm_sim_llik = tdmm_sbm_sim_llik,
-    tdmm_sbm_fit_llik = tdmm_sbm_fit_llik,
+    tdmm_sbm_sim_llik = tdmm_sbm_sim_llik, #true
+    tdmm_sbm_fit_llik = tdmm_sbm_fit_llik, #fit
     tdmm_sim_vs_fit = tdmm_sbm_fit_llik - tdmm_sbm_sim_llik,
     tdmm_discrete_fit_llik = tdmm_discrete_fit_llik,
-    tdmm_fit_vs_discrete_fit = tdmm_discrete_fit_llik - tdmm_sbm_fit_llik,
+    tdmm_fit_vs_discrete_fit = tdmm_discrete_fit_llik - tdmm_sbm_sim_llik,
     fit_time = fit_time
   )
   
