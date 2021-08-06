@@ -429,11 +429,11 @@ simulate_tdd <- function(roles, omega, theta = NULL,
   # results33 = simulate_tdd(roles, omega = omega_2, theta = dc_fctrs, sim_method = "tdd-sbm-3", fit_method = "tdd-sbm-3")
 
 # 3. tdd simulation ----
-#    - run tdd-sbm simulation (if run_mode = TRUE) ----
+#    - run tdd-sbm simulation (if run_mode == TRUE) ----
 
 tdd_table_30 = data.frame(expand.grid(K = K_set, N = N_set[1], sim_method = c("tdd-sbm-0", "tdd-sbm-3"), 
                                         fit_method = c("tdd-sbm-0", "tdd-sbm-3", "ppsbm")))
-if (run_mode = TRUE) {
+if (run_mode) {
  tdd_results_30 = apply(tdd_table_30, 1, function(x) {
   cat("running for parameters:", x,"\n")
   K = as.numeric(x['K'])
@@ -449,7 +449,7 @@ if (run_mode = TRUE) {
 
 tdd_table_90 = data.frame(expand.grid(K = K_set, N = N_set[2], sim_method = c("tdd-sbm-0", "tdd-sbm-3"), 
                                        fit_method = c("tdd-sbm-0", "tdd-sbm-3", "ppsbm")))
-if (run_mode = TRUE) {
+if (run_mode) {
   tdd_results_90 = apply(tdd_table_90, 1, function(x) {
   cat("running for parameters:", x,"\n")
   K = as.numeric(x['K'])
@@ -669,9 +669,9 @@ simulate_tdmm <- function(roles, omega, n_sim = 10, n_iter = 10, directed = TRUE
 }
 
 # 5. tdmm simulation -----
-#   - run tdd-sbm simulation(if run_mode = TRUE) ----
+#   - run tdd-sbm simulation(if run_mode == TRUE) ----
 
-if (run_mode = TRUE) {
+if (run_mode) {
   tdmm_results_30 = lapply(1:length(K_set), function(i) {
     #setwd("mixed_model_implementation_python") # assume starting from tdsbm_supplementary_material directory
     setwd("/Users/jcarlen/Documents/tdsbm_supplementary_material/mixed_model_implementation_python")
@@ -695,7 +695,7 @@ if (run_mode = TRUE) {
   saveRDS(tdmm_results_30, "sim_study/output/tdmm_results_30.rds")
 }
 
-if (run_mode = TRUE) { #takes a while
+if (run_mode) { #takes a while
   tdmm_results_90 = lapply(1:length(K_set), function(i) {
     #setwd("mixed_model_implementation_python") # assume starting from tdsbm_supplementary_material directory
     setwd("/Users/jcarlen/Documents/tdsbm_supplementary_material/mixed_model_implementation_python")
@@ -783,9 +783,9 @@ print(xtable(tdmm_tables[[2]]), include.rownames = FALSE)
 
 # 6. tdmm simulation with LA results -----
 
-#   - run tdd-sbm simulation(if run_mode = TRUE) ----
+#   - run tdd-sbm simulation(if run_mode == TRUE) ----
 
-if (run_mode = TRUE) {
+if (run_mode) {
   tdmm_results_LA = lapply(1:length(K_set), function(i) {
     setwd("~/Documents/tdsbm_supplementary_material/mixed_model_implementation_python")
     N = 61
