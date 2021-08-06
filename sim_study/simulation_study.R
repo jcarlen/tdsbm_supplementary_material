@@ -233,9 +233,6 @@ generate_theta <- function(roles, dc_levels) {
 roles = generate_roles(30, role_types = 2, type = "discrete", rel_freq = c(.5,.5))
 generate_theta(roles, dc_levels = c(1,2,3))
 
-print("end section 1")
-
-print("end section 1")
 # --------------------------------------------------------------------------------------------------------------
 # 2. tdd-sbm ----------------------------------------------------------------------------------------------
 #    - tdd-sbm sim function ----
@@ -432,6 +429,8 @@ simulate_tdd <- function(roles, omega, theta = NULL,
   # dc_fctrs = generate_theta(roles, dc_levels = c(1:5))
   # results30 = simulate_tdd(roles, omega = omega_2, theta = dc_fctrs, sim_method = "tdd-sbm-3", fit_method = "tdd-sbm-0")
   # results33 = simulate_tdd(roles, omega = omega_2, theta = dc_fctrs, sim_method = "tdd-sbm-3", fit_method = "tdd-sbm-3")
+
+print("end section 2")
 
 # 3. tdd simulation ----
 #    - run tdd-sbm simulation (if run_mode == TRUE) ----
