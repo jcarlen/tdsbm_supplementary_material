@@ -1,14 +1,16 @@
 # OUTLINE
 # 1. Run tdd simulation to evaluate parameter estimation
-# 2. ppsbm to show impact of degree correction 
+# 2. tdd-sbm without degree correction and ppsbm to show impact of degree correction 
 # 3. mixed-membership to show impact of potential model mis-specification
+# ---------------------------------------------------------------------------------------------------------------
+# NOTES
+# 1. Assumes you're in the tdsbm_supplementary_material directory
+# 2. degree correction can also lead to a more parsimonious and interpretable model representation where there is degree heterogeneity 
+#   because a unique class is not needed for each degree*activity level.
 # ---------------------------------------------------------------------------------------------------------------
 # TO DO
 # - add generate_multilayer_array to sbmt package to facilitate simulation? as "simulate" method?
 #     + implement & test for directed networks
-# - Add harder cases with smaller amplitude sin curves so hard to distinguish? if it gets harder try with more nodes.
-# - Note: degree correcton can also lead to a more parsimonious and interpretable model representation where there is degree heterogeneity 
-#   because a unique class is not needed for each degree-activity level.
 # ---------------------------------------------------------------------------------------------------------------
 # libraries ----
 # devtools::install_github("jcarlen/sbm", subdir = "sbmt") 
@@ -673,8 +675,8 @@ simulate_tdmm <- function(roles, omega, n_sim = 10, n_iter = 10, directed = TRUE
 
 if (run_mode) {
   tdmm_results_30 = lapply(1:length(K_set), function(i) {
-    #setwd("mixed_model_implementation_python") # assume starting from tdsbm_supplementary_material directory
-    setwd("/Users/jcarlen/Documents/tdsbm_supplementary_material/mixed_model_implementation_python")
+    # assumes you're starting from tdsbm_supplementary_material directory
+    setwd("mixed_model_implementation_python")
     N = N_set[1]
     K = K_set[i]
     print(K)
@@ -688,8 +690,7 @@ if (run_mode) {
                   n_sim = N_sim,
                   n_iter = N_iter,
                   directed = TRUE, verbose = FALSE)
-    setwd("/Users/jcarlen/Documents/tdsbm_supplementary_material")
-    #setwd("..")
+    setwd("..")
     return(result)
 })
   saveRDS(tdmm_results_30, "sim_study/output/tdmm_results_30.rds")
@@ -697,8 +698,8 @@ if (run_mode) {
 
 if (run_mode) { #takes a while
   tdmm_results_90 = lapply(1:length(K_set), function(i) {
-    #setwd("mixed_model_implementation_python") # assume starting from tdsbm_supplementary_material directory
-    setwd("/Users/jcarlen/Documents/tdsbm_supplementary_material/mixed_model_implementation_python")
+    # assumes you're starting from tdsbm_supplementary_material directory
+    setwd("mixed_model_implementation_python")
     N = N_set[2]
     K = K_set[i]
     print(K)
@@ -712,8 +713,7 @@ if (run_mode) { #takes a while
                            n_sim = N_sim,
                            n_iter = N_iter,
                            directed = TRUE, verbose = FALSE)
-    setwd("/Users/jcarlen/Documents/tdsbm_supplementary_material")
-    #setwd("..")
+    setwd("..")
     return(result)
   })
   saveRDS(tdmm_results_90, "sim_study/output/tdmm_results_90.rds")
@@ -787,7 +787,8 @@ print(xtable(tdmm_tables[[2]]), include.rownames = FALSE)
 
 if (run_mode) {
   tdmm_results_LA = lapply(1:length(K_set), function(i) {
-    setwd("~/Documents/tdsbm_supplementary_material/mixed_model_implementation_python")
+    # assumes you're starting from tdsbm_supplementary_material directory
+    setwd("mixed_model_implementation_python")
     N = 61
     K = K_set[i]
     print(K)
@@ -798,7 +799,7 @@ if (run_mode) {
                            n_sim = N_sim,
                            n_iter = N_iter,
                            directed = TRUE, verbose = TRUE)
-    setwd("~/Documents/tdsbm_supplementary_material")
+    setwd("..")
     return(result)
   })
   saveRDS(tdmm_results_LA, "sim_study/output/tdmm_results_LA.rds")
