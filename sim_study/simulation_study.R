@@ -233,6 +233,9 @@ generate_theta <- function(roles, dc_levels) {
 roles = generate_roles(30, role_types = 2, type = "discrete", rel_freq = c(.5,.5))
 generate_theta(roles, dc_levels = c(1,2,3))
 
+print("end section 1")
+
+print("end section 1")
 # --------------------------------------------------------------------------------------------------------------
 # 2. tdd-sbm ----------------------------------------------------------------------------------------------
 #    - tdd-sbm sim function ----
@@ -529,6 +532,7 @@ print(xtable(tdd_tables[[2]]), include.rownames = FALSE)
 #     With data from TDD-SBM (with degree correction), PPSBM estimation wants to make a separate block for each degree-correction level (but note the LLIK_sim and LLIK_diff results use the true K)
 #     Bike example (separate script) shows how degree correction in model -> group stations with similar behavior across activity levels
 #     tdd-sbm faster than ppsbm but ppsbm is doing additional things like partition selection
+print("end section 3")
 # ---------------------------------------------------------------------------------------------------------------
 # 4. tdmm-sbm 
 #    - tdmm-sbm sim function ----
@@ -781,6 +785,7 @@ print(xtable(tdmm_tables[[1]]), include.rownames = FALSE)
 print(xtable(tdmm_tables[[2]]), include.rownames = FALSE)
 
 
+print("end section 5")
 # 6. tdmm simulation with LA results -----
 
 #   - run tdd-sbm simulation(if run_mode == TRUE) ----
