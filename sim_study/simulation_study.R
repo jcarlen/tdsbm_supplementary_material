@@ -430,7 +430,6 @@ simulate_tdd <- function(roles, omega, theta = NULL,
   # results30 = simulate_tdd(roles, omega = omega_2, theta = dc_fctrs, sim_method = "tdd-sbm-3", fit_method = "tdd-sbm-0")
   # results33 = simulate_tdd(roles, omega = omega_2, theta = dc_fctrs, sim_method = "tdd-sbm-3", fit_method = "tdd-sbm-3")
 
-print("end section 2")
 
 # 3. tdd simulation ----
 #    - run tdd-sbm simulation (if run_mode == TRUE) ----
