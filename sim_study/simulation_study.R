@@ -103,7 +103,7 @@ generate_multilayer_array <- function(roles, omega, theta = NULL, type = "discre
 K_set = c(2,3)
 N_set = c(30, 90)
 Time = 16 #use a power of two for compatibility with ppsbm hist method
-N_sim = 10
+N_sim = 2
 N_ppsbm_K = 1
 set.seed(1)
 N_iter = 10 #number of KL (TDD-SBM), VEM (PPSBM), or GD (TDMM-SBM)
