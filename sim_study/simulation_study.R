@@ -22,7 +22,7 @@ library(xtable)
 library(dplyr) #for nth
 
 # run mode (recreate or load save data?) ----
-run_mode = FALSE
+run_mode = TRUE
 # generate_multilayer_array function ----
 
 #' generate N x N x Time array (Time-sliced adjacency matrices) based on TDD-SBM (type == "discrete) or TDMM-SBM (type = "mixed") model
@@ -103,7 +103,7 @@ generate_multilayer_array <- function(roles, omega, theta = NULL, type = "discre
 K_set = c(2,3)
 N_set = c(30, 90)
 Time = 16 #use a power of two for compatibility with ppsbm hist method
-N_sim = 2
+N_sim = 100
 N_ppsbm_K = 1
 set.seed(1)
 N_iter = 10 #number of KL (TDD-SBM), VEM (PPSBM), or GD (TDMM-SBM)
@@ -675,7 +675,7 @@ simulate_tdmm <- function(roles, omega, n_sim = 10, n_iter = 10, directed = TRUE
 # 5. tdmm simulation -----
 #   - run tdd-sbm simulation(if run_mode == TRUE) ----
 
-run_mode = TRUE
+run_mode = FALSE
 
 if (run_mode) {
   tdmm_results_30 = lapply(1:length(K_set), function(i) {
