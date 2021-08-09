@@ -438,7 +438,7 @@ tdd_table_30 = data.frame(expand.grid(K = K_set, N = N_set[1], sim_method = c("t
                                         fit_method = c("tdd-sbm-0", "tdd-sbm-3", "ppsbm")))
 if (run_mode) {
  tdd_results_30 = apply(tdd_table_30, 1, function(x) {
-  cat("running for parameters:", x,"\n")
+  cat("running for N = 30, parameters:", x,"\n")
   K = as.numeric(x['K'])
   roles = generate_roles(N = as.numeric(x['N']), role_types = K, type = "discrete", rel_freq = rep(1, K)) #<- note: can alter relative role frequency by changing this specification. E.g. 1:K would give increasing frequency to higher-numbered roles.
   omega = omega_list[as.character(K)][[1]]
@@ -454,7 +454,7 @@ tdd_table_90 = data.frame(expand.grid(K = K_set, N = N_set[2], sim_method = c("t
                                        fit_method = c("tdd-sbm-0", "tdd-sbm-3", "ppsbm")))
 if (run_mode) {
   tdd_results_90 = apply(tdd_table_90, 1, function(x) {
-  cat("running for parameters:", x,"\n")
+  cat("running for N = 90, parameters:", x,"\n")
   K = as.numeric(x['K'])
   roles = generate_roles(N = as.numeric(x['N']), role_types = K, type = "discrete", rel_freq = rep(1, K)) #<- note: can alter relative role frequency by changing this specification. E.g. 1:K would give increasing frequency to higher-numbered roles.
   omega = omega_list[as.character(K)][[1]]
@@ -530,7 +530,7 @@ print(xtable(tdd_tables[[2]]), include.rownames = FALSE)
 #     With data from TDD-SBM (with degree correction), PPSBM estimation wants to make a separate block for each degree-correction level (but note the LLIK_sim and LLIK_diff results use the true K)
 #     Bike example (separate script) shows how degree correction in model -> group stations with similar behavior across activity levels
 #     tdd-sbm faster than ppsbm but ppsbm is doing additional things like partition selection
-print("end section 3")
+
 # ---------------------------------------------------------------------------------------------------------------
 # 4. tdmm-sbm 
 #    - tdmm-sbm sim function ----
@@ -675,6 +675,8 @@ simulate_tdmm <- function(roles, omega, n_sim = 10, n_iter = 10, directed = TRUE
 # 5. tdmm simulation -----
 #   - run tdd-sbm simulation(if run_mode == TRUE) ----
 
+run_mode = TRUE
+
 if (run_mode) {
   tdmm_results_30 = lapply(1:length(K_set), function(i) {
     # assumes you're starting from tdsbm_supplementary_material directory
@@ -783,7 +785,7 @@ print(xtable(tdmm_tables[[1]]), include.rownames = FALSE)
 print(xtable(tdmm_tables[[2]]), include.rownames = FALSE)
 
 
-print("end section 5")
+
 # 6. tdmm simulation with LA results -----
 
 #   - run tdd-sbm simulation(if run_mode == TRUE) ----
