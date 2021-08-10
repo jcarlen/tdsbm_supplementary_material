@@ -22,7 +22,7 @@ library(xtable)
 library(dplyr) #for nth
 
 # run mode (recreate or load save data?) ----
-run_mode = TRUE
+run_mode = FALSE
 # generate_multilayer_array function ----
 
 #' generate N x N x Time array (Time-sliced adjacency matrices) based on TDD-SBM (type == "discrete) or TDMM-SBM (type = "mixed") model
@@ -127,24 +127,32 @@ t = Time
 png("IMG/sim_omega_3.png", width = 600, height = 400, units = "px", pointsize = 12)
 par(mai =c(.4,.7,.3,.2))
 par(mfrow = c(3, 3))
-curve(b*sin(t*pi/16) + b, 0, t, ylim = c(0, ymax), main = ("1 to 1"), xlab = "", xname = "t")
+curve(b*sin(t*pi/16) + b, 0, t, ylim = c(0, ymax), main = ("1 to 1"), xlab = "", xname = "t", cex.lab = 1.25,
+      font.lab = 3, ylab = expression(italic(paste("b*sin(x*",pi,"/16) + b"))))
   points(x, b*sin(x*pi/16) + b, cex = .9, col = "red", pch = 16)
-curve(a*sin(t*2*pi/16)+a, 0, t, ylim = c(0, ymax), main = ("1 to 2"), xlab = "", xname = "t")
+curve(a*sin(t*2*pi/16)+a, 0, t, ylim = c(0, ymax), main = ("1 to 2"), xlab = "", xname = "t", cex.lab = 1.25,
+      font.lab = 3, ylab = expression(italic(paste("a*sin(x*2*",pi,"/16)+a"))))
   points(x, a*sin(x*2*pi/16)+a, cex = .9, col = "red", pch = 16)
-curve(a*sin(t*2*pi/16-1)/2+a, 0, t, ylim = c(0, ymax), main = ("1 to 3"), xlab = "", xname = "t")
+curve(a*sin(t*2*pi/16-1)/2+a, 0, t, ylim = c(0, ymax), main = ("1 to 3"), xlab = "", xname = "t", cex.lab = 1.25,
+      font.lab = 3, ylab = expression(italic(paste("a*sin(x*2*",pi,"/16-1)/2+a"))))
   points(x, a*sin(x*2*pi/16-1)/2+a, cex = .9, col = "red", pch = 16)
-curve(-a*sin(t*2*pi/16)+a, 0, t, ylim = c(0, ymax), main = ("2 to 1"), xlab = "", xname = "t")
+curve(-a*sin(t*2*pi/16)+a, 0, t, ylim = c(0, ymax), main = ("2 to 1"), xlab = "", xname = "t", cex.lab = 1.25,
+      font.lab = 3, ylab = expression(italic(paste("-a*sin(x*2*",pi,"/16)+a"))))
   points(x, -a*sin(x*2*pi/16)+a, cex = .9, col = "red", pch = 16)
-curve(b*sin(t*pi/16)^3+ b, 0, t, ylim = c(0, ymax), main = ("2 to 2"), xlab = "", xname = "t")
+curve(b*sin(t*pi/16)^3+ b, 0, t, ylim = c(0, ymax), main = ("2 to 2"), xlab = "", xname = "t", cex.lab = 1.25,
+      font.lab = 3, ylab = expression(italic(paste("b*sin(x*",pi,"/16)^3+ b"))))
   points(x, b*sin(x*pi/16)^3+ b, cex = .9, col = "red", pch = 16)
-curve(a*sin(t*4*pi/16-2)/2+a, 0, t, ylim = c(0, ymax), main = ("2 to 3"), xlab = "", xname = "t")
+curve(a*sin(t*4*pi/16-2)/2+a, 0, t, ylim = c(0, ymax), main = ("2 to 3"), xlab = "", xname = "t", cex.lab = 1.25,
+      font.lab = 3, ylab = expression(italic(paste("a*sin(x*4*",pi,"/16-2)/2+a"))))
   points(x, a*sin(x*4*pi/16-2)/2+a, cex = .9, col = "red", pch = 16)
-curve(-a*sin(t*2*pi/16-1)/2+a, 0, t, ylim = c(0, ymax), main = ("3 to 1"), xlab = "", xname = "t")
+curve(-a*sin(t*2*pi/16-1)/2+a, 0, t, ylim = c(0, ymax), main = ("3 to 1"), xlab = "", xname = "t", cex.lab = 1.25,
+      font.lab = 3, ylab = expression(italic(paste("-a*sin(x*2*",pi,"/16-1)/2+a"))))
   points(x, -a*sin(x*2*pi/16-1)/2+a, cex = .9, col = "red", pch = 16)
-curve(-a*sin(t*4*pi/16-2)/2+a, 0, t, ylim = c(0, ymax), main = ("3 to 2"),  xlab = "", xname = "t")
+curve(-a*sin(t*4*pi/16-2)/2+a, 0, t, ylim = c(0, ymax), main = ("3 to 2"),  xlab = "", xname = "t", cex.lab = 1.25,
+      font.lab = 3, ylab = expression(italic(paste("-a*sin(x*4*",pi,"/16-2)/2+a"))))
   points(x, -a*sin(x*4*pi/16-2)/2+a, cex = .9, col = "red", pch = 16)
-axis(1,8,"t",tick=FALSE,padj=1.5,font.axis=2, cex.axis = 1.25)
-curve(0*t+b, 0, t, ylim = c(0, ymax), main = ("3 to 3"), xlab = "", xname = "t")
+axis(1,8,"t",tick=FALSE,padj=1.25,font.axis=4, cex.axis = 1.5)
+curve(0*t+b, 0, t, ylim = c(0, ymax), main = ("3 to 3"), xlab = "", xname = "t", font.lab = 3, ylab = "0*x+b", cex.lab = 1.25,)
   points(x, 0*x+b, cex = .9, col = "red", pch = 16)
 dev.off()
 rm(t)
@@ -568,6 +576,7 @@ simulate_tdmm <- function(roles, omega, n_sim = 10, n_iter = 10, directed = TRUE
   # run -----
   for (s in 1:n_sim) {
    
+   cat("sim", s, as.character(Sys.time()))
    # generate simulation  
    sim_mixed_edge_array = generate_multilayer_array(roles, omega, type = "mixed")
    #without randomness: sim_mixed_edge_array = array(unlist(lapply(1:Time, function(i) {roles %*% block_omega[,,i] %*% t(roles)})), dim = c(N, N, Time))
@@ -675,7 +684,7 @@ simulate_tdmm <- function(roles, omega, n_sim = 10, n_iter = 10, directed = TRUE
 # 5. tdmm simulation -----
 #   - run tdd-sbm simulation(if run_mode == TRUE) ----
 
-run_mode = FALSE
+run_mode = TRUE
 
 if (run_mode) {
   tdmm_results_30 = lapply(1:length(K_set), function(i) {
