@@ -684,8 +684,6 @@ simulate_tdmm <- function(roles, omega, n_sim = 10, n_iter = 10, directed = TRUE
 # 5. tdmm simulation -----
 #   - run tdd-sbm simulation(if run_mode == TRUE) ----
 
-run_mode = FALSE
-
 if (run_mode) {
   tdmm_results_30 = lapply(1:length(K_set), function(i) {
     # assumes you're starting from tdsbm_supplementary_material directory
