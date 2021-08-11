@@ -1,4 +1,4 @@
-# Run sbmt on london cycles data used in Matias et al. PPSBM paper: "A semiparametric extension of the stochastic block model for longitudinal networks: Semiparametric estimation in PPSBM"
+# Run sbmt on london cycles data used in Matias et al. PPSBM paper: "A semiparametric extension of the stochastic block model for longitudinal networks" 
 # Jane Carlen
 # Created: 9-14-20
 # Download dlondon bike ddata from: http://cmatias.perso.math.cnrs.fr/

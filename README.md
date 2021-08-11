@@ -60,5 +60,10 @@ The material in this folder is hosted at: https://github.com/jcarlen/tdsbm_suppl
     
 - stan\_results contains the estimated omega and C parameters for two-block TDMM-SBM of LA, SF, and the Manhattan subnetwork of New York City. (We did not complete estimation in R/Stan of the entire NYC network with an adequate sample size.)
 
+8) sim\_study
 
+- The simulation\_study.R script contains code to generate synthetic networks using our TDD-SBM and TDMM-SBM and fit those networks with several SBM variants, including discrete- and mixed-membership models and non-degree corrected models. 
 
+- The sbmt\_london\_cycles.R script contains code to fit our TDD-SBM to the London cycles data set used in "A semiparametric extension of the stochastic block model for longitudinal networks" by Matias et al. (the paper introducing their PPSBM).
+
+- Output from the above two scripts is contained in the output folder. (Those scripts take a while to run.)
