@@ -8,7 +8,7 @@ The material in this folder is hosted at: https://github.com/jcarlen/tdsbm_suppl
 
 - At beginning of the script, set your working directory as the path to your tdsbm\_supplementary\_material folder by modifying the line:
     
-    ````setwd("~/Documents/285J/tdsbm_supplementary_material")````
+    ````setwd("~/Documents/tdsbm_supplementary_material")````
     
 - One way to run this script in the terminal is to navigate to the tdsbm\_supplementary\_material folder and then (assuming you have R installed) enter 
 
