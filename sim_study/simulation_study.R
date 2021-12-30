@@ -5,7 +5,7 @@
 # ---------------------------------------------------------------------------------------------------------------
 # NOTES
 # 1. Assumes you're in the tdsbm_supplementary_material directory
-# 2. degree correction can also lead to a more parsimonious and interpretable model representation where there is degree heterogeneity 
+# 2. degree correction can lead to a more parsimonious and interpretable model representation where there is degree heterogeneity 
 #   because a unique class is not needed for each degree*activity level.
 # ---------------------------------------------------------------------------------------------------------------
 # TO DO
@@ -113,71 +113,55 @@ N_iter = 10 #number of KL (TDD-SBM), VEM (PPSBM), or GD (TDMM-SBM)
 a = 10
 b = 5 
 ymax =  max(2*a, 2*b)
-x = seq(.5, Time)
-
-# show two-block curves
-par(mfrow = c(2, 2))
-curve(b*sin(x*pi/Time) + b, 0, Time, ylim = c(0, ymax))
-curve(a*sin(x*2*pi/Time)+a, 0, Time, ylim = c(0, ymax))
-curve(-a*sin(x*2*pi/Time)+a, 0, Time, ylim = c(0, ymax))
-curve(b*sin(x*pi/Time)^3+ b, 0, Time, ylim = c(0, ymax))
+x = seq(0, Time-1)
 
 # show three-block curves
+png("IMG/sim_omega_3.png", width = 2400, height = 1600, units = "px", pointsize = 48)
+
 t = Time
-png("IMG/sim_omega_3.png", width = 600, height = 400, units = "px", pointsize = 12)
-par(mai =c(.4,.7,.3,.2))
-par(mfrow = c(3, 3))
-curve(b*sin(t*pi/16) + b, 0, t, ylim = c(0, ymax), main = ("1 to 1"), xlab = "", xname = "t", cex.lab = 1.25,
-      font.lab = 3, ylab = expression(italic(paste("b*sin(x*",pi,"/16) + b"))))
-  points(x, b*sin(x*pi/16) + b, cex = .9, col = "red", pch = 16)
-curve(a*sin(t*2*pi/16)+a, 0, t, ylim = c(0, ymax), main = ("1 to 2"), xlab = "", xname = "t", cex.lab = 1.25,
-      font.lab = 3, ylab = expression(italic(paste("a*sin(x*2*",pi,"/16)+a"))))
-  points(x, a*sin(x*2*pi/16)+a, cex = .9, col = "red", pch = 16)
-curve(a*sin(t*2*pi/16-1)/2+a, 0, t, ylim = c(0, ymax), main = ("1 to 3"), xlab = "", xname = "t", cex.lab = 1.25,
-      font.lab = 3, ylab = expression(italic(paste("a*sin(x*2*",pi,"/16-1)/2+a"))))
-  points(x, a*sin(x*2*pi/16-1)/2+a, cex = .9, col = "red", pch = 16)
-curve(-a*sin(t*2*pi/16)+a, 0, t, ylim = c(0, ymax), main = ("2 to 1"), xlab = "", xname = "t", cex.lab = 1.25,
-      font.lab = 3, ylab = expression(italic(paste("-a*sin(x*2*",pi,"/16)+a"))))
-  points(x, -a*sin(x*2*pi/16)+a, cex = .9, col = "red", pch = 16)
-curve(b*sin(t*pi/16)^3+ b, 0, t, ylim = c(0, ymax), main = ("2 to 2"), xlab = "", xname = "t", cex.lab = 1.25,
-      font.lab = 3, ylab = expression(italic(paste("b*sin(x*",pi,"/16)^3+ b"))))
-  points(x, b*sin(x*pi/16)^3+ b, cex = .9, col = "red", pch = 16)
-curve(a*sin(t*4*pi/16-2)/2+a, 0, t, ylim = c(0, ymax), main = ("2 to 3"), xlab = "", xname = "t", cex.lab = 1.25,
-      font.lab = 3, ylab = expression(italic(paste("a*sin(x*4*",pi,"/16-2)/2+a"))))
-  points(x, a*sin(x*4*pi/16-2)/2+a, cex = .9, col = "red", pch = 16)
-curve(-a*sin(t*2*pi/16-1)/2+a, 0, t, ylim = c(0, ymax), main = ("3 to 1"), xlab = "", xname = "t", cex.lab = 1.25,
-      font.lab = 3, ylab = expression(italic(paste("-a*sin(x*2*",pi,"/16-1)/2+a"))))
-  points(x, -a*sin(x*2*pi/16-1)/2+a, cex = .9, col = "red", pch = 16)
-curve(-a*sin(t*4*pi/16-2)/2+a, 0, t, ylim = c(0, ymax), main = ("3 to 2"),  xlab = "", xname = "t", cex.lab = 1.25,
-      font.lab = 3, ylab = expression(italic(paste("-a*sin(x*4*",pi,"/16-2)/2+a"))))
-  points(x, -a*sin(x*4*pi/16-2)/2+a, cex = .9, col = "red", pch = 16)
+par(mai =c(1.6, 3,.8,.3))
+par(mfrow =  c(3, 3))
+curve(b*sin((t+.5)*pi/16) + b, 0, t-1, ylim = c(0, ymax), main = ("1 to 1"), xlab = "", xname = "t", cex.lab = 1,
+      font.lab = 3, ylab = expression(italic(paste("b*sin((t+.5)",pi,"/16) + b"))))
+  points(x, b*sin((x+.5)*pi/16) + b, cex = .9, col = "red", pch = 16)
+curve(a*sin((t+.5)*2*pi/16)+a, 0, t-1, ylim = c(0, ymax), main = ("1 to 2"), xlab = "", xname = "t", cex.lab = 1.05,
+      font.lab = 3, ylab = expression(italic(paste("a*sin((t+.5)2",pi,"/16)+a"))))
+  points(x, a*sin((x+.5)*2*pi/16)+a, cex = .9, col = "red", pch = 16)
+curve(a*sin((t+.5)*2*pi/16-1)/2+a, 0, t-1, ylim = c(0, ymax), main = ("1 to 3"), xlab = "", xname = "t", cex.lab = 1.05,
+      font.lab = 3, ylab = expression(italic(paste("a*sin((t+.5)2",pi,"/16-1)/2+a"))))
+  points(x, a*sin((x+.5)*2*pi/16-1)/2+a, cex = .9, col = "red", pch = 16)
+curve(-a*sin((t+.5)*2*pi/16)+a, 0, t-1, ylim = c(0, ymax), main = ("2 to 1"), xlab = "", xname = "t", cex.lab = 1.05,
+      font.lab = 3, ylab = expression(italic(paste("-a*sin((t+.5)2",pi,"/16)+a"))))
+  points(x, -a*sin((x+.5)*2*pi/16)+a, cex = .9, col = "red", pch = 16)
+curve(b*sin((t+.5)*pi/16)^3+ b, 0, t-1, ylim = c(0, ymax), main = ("2 to 2"), xlab = "", xname = "t", cex.lab = 1.05,
+      font.lab = 3, ylab = expression(italic(paste("b*sin((t+.5)",pi,"/16)^3+ b"))))
+  points(x, b*sin((x+.5)*pi/16)^3+ b, cex = .9, col = "red", pch = 16)
+curve(a*sin((t+.5)*4*pi/16-2)/2+a, 0, t-1, ylim = c(0, ymax), main = ("2 to 3"), xlab = "", xname = "t", cex.lab = 1.05,
+      font.lab = 3, ylab = expression(italic(paste("a*sin((t+.5)4",pi,"/16-2)/2+a"))))
+  points(x, a*sin((x+.5)*4*pi/16-2)/2+a, cex = .9, col = "red", pch = 16)
+curve(-a*sin((t+.5)*2*pi/16-1)/2+a, 0, t-1, ylim = c(0, ymax), main = ("3 to 1"), xlab = "", xname = "t", cex.lab = 1.05,
+      font.lab = 3, ylab = expression(italic(paste("-a*sin((t+.5)2",pi,"/16-1)/2+a"))))
+  points(x, -a*sin((x+.5)*2*pi/16-1)/2+a, cex = .9, col = "red", pch = 16)
+curve(-a*sin((t+.5)*4*pi/16-2)/2+a, 0, t-1, ylim = c(0, ymax), main = ("3 to 2"),  xlab = "", xname = "t", cex.lab = 1.05,
+      font.lab = 3, ylab = expression(italic(paste("-a*sin((t+.5)4",pi,"/16-2)/2+a"))))
+  points(x, -a*sin((x+.5)*4*pi/16-2)/2+a, cex = .9, col = "red", pch = 16)
 axis(1,8,"t",tick=FALSE,padj=1.25,font.axis=4, cex.axis = 1.5)
-curve(0*t+b, 0, t, ylim = c(0, ymax), main = ("3 to 3"), xlab = "", xname = "t", font.lab = 3, ylab = "0*x+b", cex.lab = 1.25,)
+curve(0*(t+.5)+b, 0, t-1, ylim = c(0, ymax), main = ("3 to 3"), xlab = "", xname = "t", 
+      font.lab = 3, ylab = "b", cex.lab = 1.05)
   points(x, 0*x+b, cex = .9, col = "red", pch = 16)
-dev.off()
 rm(t)
 
-#show overlapping
-# par(mfrow = c(1,1))
-# curve(a*sin(x*2*pi/Time)+a, 0, Time, ylim = c(0, ymax))
-# curve(-a*sin(x*2*pi/Time)+a, 0, Time, add = TRUE, lty = 2)
-# curve(a*sin(x*2*pi/Time-1)/2+a, 0, Time, col = "blue", add = TRUE)
-# curve(-a*sin(x*2*pi/Time-1)/2+a, 0, Time, col = "blue", add = TRUE, lty = 2)
-# curve(a*sin(x*4*pi/Time-2)/2+a, 0, Time, col = "green", add = TRUE)
-# curve(-a*sin(x*4*pi/Time-2)/2+a, 0, Time, col = "green", add = TRUE, lty = 2)
-# curve(b*sin(x*pi/Time) + b, 0, Time, col = "red", add = TRUE)
-# curve(b*sin(x*pi/Time)^3+ b, 0, Time, col = "red", add = TRUE, lty = 2)
-# curve(0*x+b, 0, Time, col = "red", add = TRUE, lty = 3)
+dev.off()
 
-omega_11 = b*sin(x*pi/Time) + b
-omega_12 =  a*sin(x*2*pi/Time)+a
-omega_21 = -a*sin(x*2*pi/Time)+a
-omega_22 = b*sin(x*pi/Time)^3+ b
-omega_13 =  a*sin(x*2*pi/Time-1)/2+a
-omega_31 = -a*sin(x*2*pi/Time-1)/2+a
-omega_23 =  a*sin(x*4*pi/Time-2)/2+a
-omega_32 = -a*sin(x*4*pi/Time-2)/2+a
-omega_33 = 0*x + b
+omega_11 = b*sin((x+.5)*pi/Time) + b
+omega_12 =  a*sin((x+.5)*2*pi/Time)+a
+omega_21 = -a*sin((x+.5)*2*pi/Time)+a
+omega_22 = b*sin((x+.5)*pi/Time)^3+ b
+omega_13 =  a*sin((x+.5)*2*pi/Time-1)/2+a
+omega_31 = -a*sin((x+.5)*2*pi/Time-1)/2+a
+omega_23 =  a*sin((x+.5)*4*pi/Time-2)/2+a
+omega_32 = -a*sin((x+.5)*4*pi/Time-2)/2+a
+omega_33 = 0*(x+.5) + b
 
 omega_2 = array(rbind(omega_11, omega_21, omega_12, omega_22), dim = c(2, 2, Time)) #left most index moves fastest
 omega_3 = array(rbind(omega_11, omega_21, omega_31,

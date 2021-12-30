@@ -2146,7 +2146,7 @@ ggsave("IMG/ny_hm_4.png", ny_plot_hm.4, width = 12, height = 6)
 ny_hm_compare.5 = cbind(rbind(ny_hm_discrete.5[,c("id", "lon", "lat")],
                               ny_hm_static.5[,c("id", "lon", "lat")],
                               ny_hm_continuous.5[,c("id", "lon", "lat")]),
-                        model = c(rep("TDD-SBM (5)", nrow(ny_hm_discrete.5)),
+                        model = c(rep("TDD-SBM (5)", nrow(ny_hm_discrete.5)), #change name for final plot
                                   rep("SBM (5)", nrow(ny_hm_static.5)),
                                   rep("TDMM-SBM (5)", nrow(ny_hm_continuous.5))),
                         role_tdmm = c(#gray(as.numeric(ny_hm_discrete.5$role)/max(as.numeric(ny_hm_discrete.5$role))),
@@ -2186,6 +2186,8 @@ ggsave("IMG/ny_hm_5.png", ny_plot_hm.5, width = 12, height = 6)
 
 #      final plot (5 blocks) ----
 
+
+levels(ny_hm_compare.5$model) = c("Manhattan, Mixed Membership", "Manhattan, Discrete Membership", "SBM (5)")
 ny_plot_hm = ggplot(ny_hm_compare.5 %>% filter(model != "SBM (5)")) +
   geom_point(aes(x = lon, y = lat, shape = role_tdd), 
              fill = as.character(ny_hm_compare.5$role_tdmm[!ny_hm_compare.5$model=="SBM (5)"]), size = 4) + 
@@ -2199,6 +2201,7 @@ ny_plot_hm = ggplot(ny_hm_compare.5 %>% filter(model != "SBM (5)")) +
   #scale_fill_manual(values = c("white","black","gray")) + 
   theme_classic() +
   theme(plot.title = element_text(hjust = 0.5),
+        strip.text = element_text(hjust = 0.5, size = 16),
         axis.title.x = element_blank(),
         axis.text.x = element_blank(),
         axis.ticks.x = element_blank(),
