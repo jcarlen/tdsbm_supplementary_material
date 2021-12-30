@@ -122,28 +122,28 @@ t = Time
 par(mai =c(1.6, 3,.8,.3))
 par(mfrow =  c(3, 3))
 curve(b*sin((t+.5)*pi/16) + b, 0, t-1, ylim = c(0, ymax), main = ("1 to 1"), xlab = "", xname = "t", cex.lab = 1,
-      font.lab = 3, ylab = expression(italic(paste("b*sin((t+.5)",pi,"/16) + b"))))
+      font.lab = 3, ylab = expression(italic(paste("b*sin((t+0.5)",pi,"/16) + b"))))
   points(x, b*sin((x+.5)*pi/16) + b, cex = .9, col = "red", pch = 16)
 curve(a*sin((t+.5)*2*pi/16)+a, 0, t-1, ylim = c(0, ymax), main = ("1 to 2"), xlab = "", xname = "t", cex.lab = 1.05,
-      font.lab = 3, ylab = expression(italic(paste("a*sin((t+.5)2",pi,"/16)+a"))))
+      font.lab = 3, ylab = expression(italic(paste("a*sin((t+0.5)2",pi,"/16)+a"))))
   points(x, a*sin((x+.5)*2*pi/16)+a, cex = .9, col = "red", pch = 16)
 curve(a*sin((t+.5)*2*pi/16-1)/2+a, 0, t-1, ylim = c(0, ymax), main = ("1 to 3"), xlab = "", xname = "t", cex.lab = 1.05,
-      font.lab = 3, ylab = expression(italic(paste("a*sin((t+.5)2",pi,"/16-1)/2+a"))))
+      font.lab = 3, ylab = expression(italic(paste("a*sin((t+0.5)2",pi,"/16-1)/2+a"))))
   points(x, a*sin((x+.5)*2*pi/16-1)/2+a, cex = .9, col = "red", pch = 16)
 curve(-a*sin((t+.5)*2*pi/16)+a, 0, t-1, ylim = c(0, ymax), main = ("2 to 1"), xlab = "", xname = "t", cex.lab = 1.05,
-      font.lab = 3, ylab = expression(italic(paste("-a*sin((t+.5)2",pi,"/16)+a"))))
+      font.lab = 3, ylab = expression(italic(paste("-a*sin((t+0.5)2",pi,"/16)+a"))))
   points(x, -a*sin((x+.5)*2*pi/16)+a, cex = .9, col = "red", pch = 16)
 curve(b*sin((t+.5)*pi/16)^3+ b, 0, t-1, ylim = c(0, ymax), main = ("2 to 2"), xlab = "", xname = "t", cex.lab = 1.05,
-      font.lab = 3, ylab = expression(italic(paste("b*sin((t+.5)",pi,"/16)^3+ b"))))
+      font.lab = 3, ylab = expression(italic(paste("b*sin((t+0.5)",pi,"/16)^3+ b"))))
   points(x, b*sin((x+.5)*pi/16)^3+ b, cex = .9, col = "red", pch = 16)
 curve(a*sin((t+.5)*4*pi/16-2)/2+a, 0, t-1, ylim = c(0, ymax), main = ("2 to 3"), xlab = "", xname = "t", cex.lab = 1.05,
-      font.lab = 3, ylab = expression(italic(paste("a*sin((t+.5)4",pi,"/16-2)/2+a"))))
+      font.lab = 3, ylab = expression(italic(paste("a*sin((t+0.5)4",pi,"/16-2)/2+a"))))
   points(x, a*sin((x+.5)*4*pi/16-2)/2+a, cex = .9, col = "red", pch = 16)
 curve(-a*sin((t+.5)*2*pi/16-1)/2+a, 0, t-1, ylim = c(0, ymax), main = ("3 to 1"), xlab = "", xname = "t", cex.lab = 1.05,
-      font.lab = 3, ylab = expression(italic(paste("-a*sin((t+.5)2",pi,"/16-1)/2+a"))))
+      font.lab = 3, ylab = expression(italic(paste("-a*sin((t+0.5)2",pi,"/16-1)/2+a"))))
   points(x, -a*sin((x+.5)*2*pi/16-1)/2+a, cex = .9, col = "red", pch = 16)
 curve(-a*sin((t+.5)*4*pi/16-2)/2+a, 0, t-1, ylim = c(0, ymax), main = ("3 to 2"),  xlab = "", xname = "t", cex.lab = 1.05,
-      font.lab = 3, ylab = expression(italic(paste("-a*sin((t+.5)4",pi,"/16-2)/2+a"))))
+      font.lab = 3, ylab = expression(italic(paste("-a*sin((t+0.5)4",pi,"/16-2)/2+a"))))
   points(x, -a*sin((x+.5)*4*pi/16-2)/2+a, cex = .9, col = "red", pch = 16)
 axis(1,8,"t",tick=FALSE,padj=1.25,font.axis=4, cex.axis = 1.5)
 curve(0*(t+.5)+b, 0, t-1, ylim = c(0, ymax), main = ("3 to 3"), xlab = "", xname = "t", 
