@@ -5,6 +5,7 @@
 
 #Set to the path to your tdsbm_supplementary_material folder:
 setwd("~/Documents/tdsbm_supplementary_material")
+run_mode = FALSE # If TRUE will run all the models in the script. If FALSE will only run the quick models and load saved output from the slow ones.
 
 ################################################################################################
 # 0. Setup ####
@@ -485,7 +486,7 @@ for (i in 0:23) {
 }
 
 #----------------------------------------------------------------------------------------------
-#  1h. Save without weekends (for reproducibility and use by mixed model) ---- ----
+#  1h. Save without weekends (for reproducibility and use by mixed-membership model) ---- ----
 
 write.csv(la[,c("start_time", "end_time", "start_station_id", "end_station_id",
                 "start_lat", "start_lon", "end_lat", "end_lon")], "data/cleaned/LA16_cleaned_final_no_weekend.csv", row.names = F)
@@ -502,6 +503,8 @@ write.csv(ny1610[,c("Start.Time", "Stop.Time", "Start.Station.ID", "End.Station.
 #  1i. Save cleaned data so far ----
 
 save.image("data/clean_city_data.RData")
+# if skipping data cleaning;
+# load("data/clean_city_data.RData")
 
 ################################################################################################
 # 2. Data exploratory Analysis
@@ -579,20 +582,24 @@ ggsave("IMG/sf_svd.png", svdplot2(sf.in, sf.out, 2, title = "Singular Vectors â€
 ################################################################################################
 # 3. Run models
 #----------------------------------------------------------------------------------------------
-# 3a. Run mixed models ----
-# Because some models models (particularly for new york) are time consuming to fit,
-# some code used to fit the models is commented out and results are loaded below.
+# 3a. Run mixed-membership (continuous) models ----
+
+if (run_mode) { # Note some models models (particularly for new york) are time consuming to fit,
+  
 # Note we use python3, so on some systems this call would be modified e.g. 
 # to ("python3 LosAngeles.py | tee LAoutput.txt")
 
-# setwd("mixed_model_implementation")
-# system("python LosAngeles.py | tee LAoutput.txt")
-# system("python SanFrancisco.py | tee SFoutput.txt")
-# system("python NewYork.py | tee NYoutput.txt") #very slow
-# setwd("..")
+setwd("mixed_model_implementation")
+system("python LosAngeles.py | tee LAoutput.txt")
+system("python SanFrancisco.py | tee SFoutput.txt")
+system("python NewYork.py | tee NYoutput.txt") #very slow
+setwd("..")
+
+}
 
 #----------------------------------------------------------------------------------------------
-# 3b. Run discrete models
+# 3b. Run discrete models ----
+#----------------------------------------------------------------------------------------------
 #   LA ----
 
   # 2 blocks
@@ -637,42 +644,44 @@ ggsave("IMG/sf_svd.png", svdplot2(sf.in, sf.out, 2, title = "Singular Vectors â€
  
 #   NY ----
  
- # slow so loaded instead of run
+if (run_mode) { # slow so loaded instead of run
  
-# # 2 blocks
-# ny2.start.time = Sys.time()
-# ny2.3 = sbmt(ny_byhour,  degreeCorrect = 3, directed = T, klPerNetwork = 50, maxComms = 2, seed = 1)
-# saveRDS(ny2.3, "discrete_model_results/ny2_3.RDS")
-# ny2.end.time = Sys.time()
-# ny2.time = ny2.end.time - ny2.start.time # 7.370873 hours, 6.956191 hours, 5.146391 hours (3 trials), 5.58 another trial
-# 
-# # 3 blocks
-# ny3.start.time = Sys.time()
-# ny3.3 = sbmt(ny_byhour,  degreeCorrect = 3, directed = T, klPerNetwork = 50, maxComms = 3, seed = 1)
-# saveRDS(ny3.3, "discrete_model_results/ny3_3.RDS")
-# ny3.end.time = Sys.time()
-# ny3.time = ny3.end.time - ny3.start.time #7.068 hours, 6.303427 hours (2 trials), found best score by iter 9, 6.63 another trial
-# 
-# # 4 blocks
-# ny4.start.time = Sys.time()
-# ny4.3 = sbmt(ny_byhour,  degreeCorrect = 3, directed = T, klPerNetwork = 50, maxComms = 4, seed = 1)
-# saveRDS(ny4.3, "discrete_model_results/ny4_3.RDS")
-# ny4.end.time = Sys.time()
-# ny4.time = ny4.end.time - ny4.start.time #8.1524 hrs, 6.2345 hrs (2 trials), finds best by iter 12, 5.67 another trial
-#  
-# 5 blocks
-# ny5.start.time = Sys.time()
-# ny5.3 = sbmt(ny_byhour,  degreeCorrect = 3, directed = T, klPerNetwork = 50, maxComms = 5, seed = 1)
-# saveRDS(ny5.3, "discrete_model_results/ny5_3.RDS")
-# ny5.end.time = Sys.time()
-# ny5.time = ny5.end.time - ny5.start.time #9.552415 hours
-#
-# # 6 blocks
-# ny6.start.time = Sys.time()
-# ny6.3 = sbmt(ny_byhour,  degreeCorrect = 3, directed = T, klPerNetwork = 50, maxComms = 6, seed = 1)
-# saveRDS(ny6.3, "discrete_model_results/ny6_3.RDS")
-# ny6.end.time = Sys.time()
-# ny6.time = ny6.end.time - ny6.start.time # 8.279234 hours, 6.052419 hours 2 runs, 6.49 another trial
+# 2 blocks
+ny2.start.time = Sys.time()
+ny2.3 = sbmt(ny_byhour,  degreeCorrect = 3, directed = T, klPerNetwork = 50, maxComms = 2, seed = 1)
+saveRDS(ny2.3, "discrete_model_results/ny2_3.RDS")
+ny2.end.time = Sys.time()
+ny2.time = ny2.end.time - ny2.start.time # 7.370873 hours, 6.956191 hours, 5.146391 hours (3 trials), 5.58 another trial
+
+# 3 blocks
+ny3.start.time = Sys.time()
+ny3.3 = sbmt(ny_byhour,  degreeCorrect = 3, directed = T, klPerNetwork = 50, maxComms = 3, seed = 1)
+saveRDS(ny3.3, "discrete_model_results/ny3_3.RDS")
+ny3.end.time = Sys.time()
+ny3.time = ny3.end.time - ny3.start.time #7.068 hours, 6.303427 hours (2 trials), found best score by iter 9, 6.63 another trial
+
+# 4 blocks
+ny4.start.time = Sys.time()
+ny4.3 = sbmt(ny_byhour,  degreeCorrect = 3, directed = T, klPerNetwork = 50, maxComms = 4, seed = 1)
+saveRDS(ny4.3, "discrete_model_results/ny4_3.RDS")
+ny4.end.time = Sys.time()
+ny4.time = ny4.end.time - ny4.start.time #8.1524 hrs, 6.2345 hrs (2 trials), finds best by iter 12, 5.67 another trial
+
+5 blocks
+ny5.start.time = Sys.time()
+ny5.3 = sbmt(ny_byhour,  degreeCorrect = 3, directed = T, klPerNetwork = 50, maxComms = 5, seed = 1)
+saveRDS(ny5.3, "discrete_model_results/ny5_3.RDS")
+ny5.end.time = Sys.time()
+ny5.time = ny5.end.time - ny5.start.time #9.552415 hours
+
+# 6 blocks
+ny6.start.time = Sys.time()
+ny6.3 = sbmt(ny_byhour,  degreeCorrect = 3, directed = T, klPerNetwork = 50, maxComms = 6, seed = 1)
+saveRDS(ny6.3, "discrete_model_results/ny6_3.RDS")
+ny6.end.time = Sys.time()
+ny6.time = ny6.end.time - ny6.start.time # 8.279234 hours, 6.052419 hours 2 runs, 6.49 another trial
+ 
+}
  
 ################################################################################################
 # 4. Load model results ####

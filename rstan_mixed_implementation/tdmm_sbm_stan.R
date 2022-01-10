@@ -9,7 +9,7 @@
 #   Necessary packages are also installed (as needed) in that script. 
 #
 # TO DO
-#     Smarter initializeation
+#     Smarter initialization
 #     See if Stan model can recover the generating values of the parameters when fit to this dataset.
 # 
 ######################################################################################################  
@@ -91,8 +91,6 @@ ny_hm_data <- list(
 # )
 
 # 2. RUN -------------------------------------
-
-#outputs of these runs are saved as fit_la_stan.RDS, fit_sf_stan.RDS, fit_ny_hm_stan.RDS, fit_ny_stan_init_run.RDS, fit_ny_stan.RDS
 
 stanc("rstan_mixed_implementation/tdmm_sbm.stan")
 
